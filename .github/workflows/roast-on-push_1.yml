@@ -18,7 +18,7 @@ on:
     branches: ["**"]
 
 permissions:
-  contents: read
+  contents: write
   # necesario para poder crear el comentario en el commit
   pull-requests: write
   issues: write
