@@ -72,3 +72,4 @@ User ─▶ Next.js Dashboard ─▶ FastAPI /api/chat
 ## License
 
 MIT
+probando
