@@ -12,13 +12,13 @@ from app.models.schemas import AnalyticsResult, ChatResponse, ChartSeries, Serie
 logger = logging.getLogger(__name__)
 
 
-def handle_chat(question: str) -> ChatResponse:
+async def handle_chat(question: str) -> ChatResponse:
     """
     Orchestrate agent call and return a structured ChatResponse.
     This is the main entry point called by the /api/chat route.
     """
     logger.info("Handling question: %s", question)
-    result = run_agent(question)
+    result = await run_agent(question)
     return ChatResponse(
         answer=result["answer"],
         analytics=result.get("analytics"),
@@ -30,7 +30,6 @@ def get_kpi_snapshot() -> Dict[str, Any]:
     """
     Return a pre-computed KPI snapshot for the dashboard without going through
     the agent. Useful for initial page load performance.
-    TODO: Add caching (Redis/in-memory) if this becomes a hot path.
     """
     try:
         top_movies = get_top_movies_by_revenue(limit=5)

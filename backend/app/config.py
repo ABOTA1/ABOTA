@@ -1,6 +1,5 @@
 """
 app/config.py – Centralised settings via Pydantic-Settings.
-All values are read from environment variables or a .env file.
 """
 from functools import lru_cache
 from typing import List
@@ -20,11 +19,12 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
     gemini_model: str = Field("gemini-2.0-flash", alias="GEMINI_MODEL")
 
-    # ── ClickHouse ─────────────────────────────────────────────────────────────
-    clickhouse_host: str = Field("localhost", alias="CLICKHOUSE_HOST")
-    clickhouse_port: int = Field(8123, alias="CLICKHOUSE_PORT")
+    # ── ClickHouse Cloud ───────────────────────────────────────────────────────
+    clickhouse_host: str = Field("your-instance.clickhouse.cloud", alias="CLICKHOUSE_HOST")
+    clickhouse_port: int = Field(8443, alias="CLICKHOUSE_PORT")
     clickhouse_user: str = Field("default", alias="CLICKHOUSE_USER")
     clickhouse_password: str = Field("", alias="CLICKHOUSE_PASSWORD")
+    clickhouse_secure: bool = Field(True, alias="CLICKHOUSE_SECURE")
     clickhouse_database: str = Field("abota", alias="CLICKHOUSE_DATABASE")
 
     # ── App ────────────────────────────────────────────────────────────────────
