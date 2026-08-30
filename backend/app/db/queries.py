@@ -33,8 +33,7 @@ def get_daily_revenue_trend(movie_title: str) -> List[Dict[str, Any]]:
     sql = f"""
         SELECT
             toDate(event_date)  AS date,
-            SUM(daily_revenue)  AS revenue,
-            SUM(social_mentions) AS mentions
+            SUM(daily_revenue)  AS revenue
         FROM box_office_metrics
         WHERE movie_title = '{safe_title}'
         GROUP BY date
@@ -44,15 +43,28 @@ def get_daily_revenue_trend(movie_title: str) -> List[Dict[str, Any]]:
 
 
 def get_platform_breakdown() -> List[Dict[str, Any]]:
-    """Aggregate metrics by streaming platform."""
+    """Aggregate metrics by platform with social mentions count."""
     sql = """
         SELECT
-            platform,
-            COUNT(DISTINCT movie_title) AS titles,
-            SUM(daily_revenue)          AS total_revenue,
-            SUM(social_mentions)        AS total_mentions
-        FROM box_office_metrics
-        GROUP BY platform
+            b.platform AS platform,
+            b.titles AS titles,
+            b.total_revenue AS total_revenue,
+            COALESCE(s.total_mentions, 0) AS total_mentions
+        FROM (
+            SELECT
+                platform,
+                COUNT(DISTINCT movie_title) AS titles,
+                SUM(daily_revenue)          AS total_revenue
+            FROM box_office_metrics
+            GROUP BY platform
+        ) AS b
+        LEFT JOIN (
+            SELECT
+                platform,
+                COUNT(*) AS total_mentions
+            FROM social_mentions
+            GROUP BY platform
+        ) AS s ON b.platform = s.platform
         ORDER BY total_revenue DESC
     """
     return execute_query(sql)
