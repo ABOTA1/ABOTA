@@ -113,11 +113,12 @@ Database Name: `abota`
 
 ### Active Tables (in `backend/scripts/seed_clickhouse.py`):
 - **`box_office_metrics`**:
-  - `movie_title` (`String`)
+  - `content_id` (`String`)
+  - `content_title` (`String`)
   - `daily_revenue` (`Float64`)
   - `platform` (`LowCardinality(String)`)
   - `event_date` (`Date`)
-  - Engine: `MergeTree()` ORDER BY `(event_date, movie_title)`
+  - Engine: `MergeTree()` ORDER BY `(content_id, event_date)`
 
 - **`streaming_activity`**:
   - `platform` (`LowCardinality(String)`)

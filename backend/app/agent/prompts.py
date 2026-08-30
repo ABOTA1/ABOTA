@@ -26,7 +26,8 @@ Rules you must follow:
 
 Available tables:
   box_office_metrics (
-    movie_title    String,
+    content_id     String,                  -- e.g. 'MOV-001'
+    content_title  String,                  -- e.g. 'Galactic Odyssey'
     daily_revenue  Float64,                 -- USD
     platform       LowCardinality(String),  -- e.g. 'Theaters', 'Netflix', 'Disney+', 'Prime Video', 'HBO Max'
     event_date     Date

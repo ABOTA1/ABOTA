@@ -76,13 +76,14 @@ def main() -> None:
     print("Creating box_office_metrics table...")
     client.command("""
         CREATE TABLE IF NOT EXISTS box_office_metrics (
-            movie_title     String,
-            daily_revenue   Float64,
-            platform        LowCardinality(String),
-            event_date      Date
+            content_id     String,
+            content_title  String,
+            daily_revenue  Float64,
+            platform       LowCardinality(String),
+            event_date     Date
         )
         ENGINE = MergeTree()
-        ORDER BY (event_date, movie_title)
+        ORDER BY (content_id, event_date)
     """)
 
     # ── 2. Table: streaming_activity ──────────────────────────────────────────
@@ -134,7 +135,7 @@ def main() -> None:
             platform_bo = random.choice(PLATFORMS_BOX_OFFICE)
             base_revenue = random.uniform(400_000, 4_500_000)
             revenue = round(base_revenue * decay * random.uniform(0.8, 1.2), 2)
-            box_office_rows.append((m_title, revenue, platform_bo, event_date))
+            box_office_rows.append((m_id, m_title, revenue, platform_bo, event_date))
 
             # Streaming Activity events per day per movie
             num_streams = random.randint(5, 20)
@@ -181,7 +182,7 @@ def main() -> None:
     client.insert(
         "box_office_metrics",
         box_office_rows,
-        column_names=["movie_title", "daily_revenue", "platform", "event_date"],
+        column_names=["content_id", "content_title", "daily_revenue", "platform", "event_date"],
     )
 
     print(f"Inserting {len(streaming_rows):,} rows into streaming_activity...")
