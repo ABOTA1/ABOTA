@@ -19,7 +19,6 @@ on:
 
 permissions:
   contents: write
-  # necesario para poder crear el comentario en el commit
   pull-requests: write
   issues: write
 
@@ -35,8 +34,6 @@ jobs:
       - name: Extraer diff del último push
         id: diff
         run: |
-          # Excluye binarios y lockfiles ruidosos, y limita tamaño
-          # para no reventar el límite de tokens del prompt.
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
             RAW_DIFF=$(git diff HEAD~1 HEAD -- . \
               ':(exclude)*.lock' ':(exclude)*.png' ':(exclude)*.jpg' \
@@ -59,51 +56,37 @@ jobs:
           AUTHOR: ${{ github.event.head_commit.author.name }}
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
-            echo "text=⚠️ Falta el secret GEMINI_API_KEY, no pude hacer el roast." >> "$GITHUB_OUTPUT"
+            echo "⚠️ Falta el secret GEMINI_API_KEY" > roast_output.txt
             exit 0
           fi
 
-          PROMPT=$(cat <<PROMPT_EOF
-          Eres un revisor de código sarcástico y directo, al estilo "roast",
-          pero que da feedback técnico real y útil (no solo insultos vacíos).
-          Autor del push: ${AUTHOR}
-          Mensaje del commit: ${COMMIT_MSG}
-
-          Aquí está el diff:
-          ${DIFF_CONTENT}
-
-          Responde en español, máximo 200 palabras, en tono burlón pero
-          constructivo. Señala 1-3 cosas concretas del diff (buenas o malas)
-          y cierra con un chiste corto relacionado con el código.
-          PROMPT_EOF
-          )
-
-          BODY=$(jq -n --arg text "$PROMPT" \
-            '{contents: [{parts: [{text: $text}]}]}')
+          PROMPT=$(jq -n \
+            --arg author "$AUTHOR" \
+            --arg commit "$COMMIT_MSG" \
+            --arg diff "$DIFF_CONTENT" \
+            '{contents: [{parts: [{text: ("Eres un revisor de código sarcástico y directo, al estilo roast, pero que da feedback técnico real y útil. Autor: " + $author + "\nCommit: " + $commit + "\nDiff:\n" + $diff + "\nResponde en español, máximo 200 palabras, en tono burlón pero constructivo.")}]}]}')
 
           RESPONSE=$(curl -s -X POST \
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}" \
             -H "Content-Type: application/json" \
-            -d "$BODY")
+            -d "$PROMPT")
 
-          ROAST=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // "🤖 No pude generar el roast esta vez, revisa la respuesta cruda en los logs."')
+          ROAST=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // "🤖 No pude generar el roast esta vez."')
 
-          {
-            echo "text<<EOF"
-            echo "$ROAST"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          echo "$ROAST" > roast_output.txt
 
       - name: Publicar el roast como comentario del commit
         uses: actions/github-script@v7
-        env:
-          ROAST_TEXT: ${{ steps.roast.outputs.text }}
         with:
           script: |
-            const { ROAST_TEXT } = process.env;
+            const fs = require('fs');
+            let roast = "🤖 No hay contenido generado.";
+            if (fs.existsSync('roast_output.txt')) {
+              roast = fs.readFileSync('roast_output.txt', 'utf8');
+            }
             await github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha,
-              body: `🔥 **Code Roast Bot**\n\n${ROAST_TEXT}`
+              body: `🔥 **Code Roast Bot**\n\n${roast}`
             });
