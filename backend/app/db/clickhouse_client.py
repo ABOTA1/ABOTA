@@ -19,12 +19,16 @@ settings = get_settings()
 @lru_cache
 def get_clickhouse_client() -> Client:
     """Return a cached ClickHouse client (thread-safe singleton)."""
+    # Limpiamos el host por si trae prefijos
+    clean_host = settings.clickhouse_host.replace("https://", "").replace("http://", "").split(":")[0]
+
     logger.info(
-        "Connecting to ClickHouse Cloud at %s:%s (Secure: %s)", 
-        settings.clickhouse_host, settings.clickhouse_port, settings.clickhouse_secure
+        "Connecting to ClickHouse Cloud at %s (Secure: %s)", 
+        clean_host, settings.clickhouse_secure
     )
+    
     client = clickhouse_connect.get_client(
-        host=settings.clickhouse_host,
+        host=clean_host,
         port=settings.clickhouse_port,
         username=settings.clickhouse_user,
         password=settings.clickhouse_password,
