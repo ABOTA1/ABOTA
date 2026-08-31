@@ -72,6 +72,21 @@ def main() -> None:
     client.command(f"CREATE DATABASE IF NOT EXISTS {settings.clickhouse_database}")
     client.command(f"USE {settings.clickhouse_database}")
 
+    force = "--force" in sys.argv
+    already_seeded = client.query(
+        "SELECT count() FROM system.tables "
+        f"WHERE database = '{settings.clickhouse_database}' "
+        "AND name = 'box_office_metrics'"
+    )
+    if already_seeded.result_rows and already_seeded.result_rows[0][0] > 0:
+        row_count = client.query("SELECT count() FROM box_office_metrics")
+        if row_count.result_rows and row_count.result_rows[0][0] > 0 and not force:
+            print(
+                "Database already has data; skipping seed. "
+                "Re-run with --force to insert another batch."
+            )
+            return
+
     # ── 1. Table: box_office_metrics ──────────────────────────────────────────
     print("Creating box_office_metrics table...")
     client.command("""

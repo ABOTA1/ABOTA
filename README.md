@@ -22,16 +22,18 @@ User ─▶ Next.js Dashboard ─▶ FastAPI /api/chat
 
 ---
 
-## ⚡ Quick Start (< 15 min from `git clone`)
+## How the team runs this project
+
+**Use Docker.** That way every machine installs the same Python and Node dependencies (from `backend/requirements.txt` and `frontend/package-lock.json`) and we avoid "it worked on my computer".
+
+You do **not** need a local venv or a global `npm install` for day-to-day work.
 
 ### Prerequisites
-- Docker & Docker Compose
+- Docker Desktop (or Docker Engine + Compose v2)
 - A [Gemini API key](https://aistudio.google.com/app/apikey)
-- A **ClickHouse Cloud** instance ($400 free credits available)
+- A **ClickHouse Cloud** instance
 
----
-
-### Setup Instructions
+### Setup
 
 1. **Clone the repo**
    ```bash
@@ -39,7 +41,7 @@ User ─▶ Next.js Dashboard ─▶ FastAPI /api/chat
    cd ABOTA
    ```
 
-2. **Configure secrets**
+2. **Configure secrets** (this file is gitignored)
    ```bash
    cp backend/.env.example backend/.env
    ```
@@ -48,19 +50,49 @@ User ─▶ Next.js Dashboard ─▶ FastAPI /api/chat
    - `CLICKHOUSE_HOST=your-instance.clickhouse.cloud`
    - `CLICKHOUSE_PASSWORD=your_cloud_password_here`
 
-3. **Launch the stack (FastAPI + Next.js)**
+3. **Launch backend + frontend**
    ```bash
    docker compose up --build
    ```
-   *(Note: The `mcp-clickhouse` server runs automatically inside the backend container as an MCP stdio subprocess).*
+   The backend image installs `backend/requirements.txt`. The frontend image runs `npm ci` from `frontend/package-lock.json`.
 
-4. **Seed the database (Run once in a new terminal)**
+4. **Seed ClickHouse once**
    ```bash
-   docker exec abota_backend python -m scripts.seed_clickhouse
+   docker compose run --rm seed
    ```
+   Safe to re-run: it skips if data already exists. Use `docker compose run --rm seed python -m scripts.seed_clickhouse --force` only if you want another batch.
 
 5. **Open the dashboard**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+   [http://localhost:3000](http://localhost:3000)  
+   API health: [http://localhost:8000/api/health](http://localhost:8000/api/health)
+
+Stop with `Ctrl+C`, or `docker compose down`.
+
+`mcp-clickhouse` runs inside the backend container as an MCP stdio subprocess. It does not need its own service.
+
+---
+
+## Optional: local venv (only if you cannot use Docker)
+
+Same packages as Docker, pinned in `backend/requirements.txt`:
+
+```bash
+cd backend
+python3.13 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env        # then fill in secrets
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Frontend (Node 20):
+
+```bash
+cd frontend
+npm ci
+cp .env.local.example .env.local
+npm run dev
+```
 
 ---
 
@@ -72,4 +104,3 @@ User ─▶ Next.js Dashboard ─▶ FastAPI /api/chat
 ## License
 
 MIT
-probando
