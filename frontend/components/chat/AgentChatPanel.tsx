@@ -5,6 +5,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { askAgent } from "@/lib/api";
 import type { AnalyticsResult, ChatResponse } from "@/types/analytics";
 
@@ -136,14 +137,14 @@ export function AgentChatPanel({ onAnalytics }: AgentChatPanelProps) {
 
       {/* Input */}
       <div className="border-t px-3 py-2 flex gap-2">
-        <input
+        <Input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
           placeholder="Ask about box office, trends, platforms…"
           disabled={loading}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="flex-1"
         />
         <button
           onClick={() => sendMessage(input)}

@@ -8,6 +8,21 @@ import { AgentChatPanel } from "@/components/chat/AgentChatPanel";
 import { BoxOfficeChart } from "@/components/charts/BoxOfficeChart";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { fetchKpis } from "@/lib/api";
 import { formatUSD, formatCompact } from "@/lib/utils";
 import type { KpiSnapshot, AnalyticsResult } from "@/types/analytics";
@@ -70,38 +85,85 @@ export default function DashboardPage() {
 
           {/* ── Charts ────────────────────────────────────────────────────── */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-xl border bg-card p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                Box Office – Top Movies
-              </h2>
-              {kpis?.top_movies ? (
-                <BoxOfficeChart data={kpis.top_movies} />
-              ) : (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-                  {loading ? "Loading data…" : "No data available"}
-                </div>
-              )}
-            </div>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                  Box Office – Top Movies
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {kpis?.top_movies ? (
+                  <BoxOfficeChart data={kpis.top_movies} />
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+                    {loading ? "Loading data…" : "No data available"}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Agent-driven chart: updates when the agent returns analytics */}
-            <div className="rounded-xl border bg-card p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                {agentAnalytics?.title ?? "Agent Chart"}
-              </h2>
-              {agentAnalytics?.series?.length ? (
-                <BoxOfficeChart
-                  data={agentAnalytics.series[0].data.map((p) => ({
-                    movie_title: p.label,
-                    total_revenue: p.value,
-                  }))}
-                />
-              ) : (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-                  Ask the agent a question to populate this chart.
-                </div>
-              )}
-            </div>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                  {agentAnalytics?.title ?? "Agent Chart"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {agentAnalytics?.series?.length ? (
+                  <BoxOfficeChart
+                    data={agentAnalytics.series[0].data.map((p) => ({
+                      movie_title: p.label,
+                      total_revenue: p.value,
+                    }))}
+                  />
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+                    Ask the agent a question to populate this chart.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Top movies</CardTitle>
+              <CardDescription>Revenue ranking from the latest KPI snapshot</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Movie</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-muted-foreground">
+                        Loading…
+                      </TableCell>
+                    </TableRow>
+                  ) : kpis?.top_movies?.length ? (
+                    kpis.top_movies.map((movie) => (
+                      <TableRow key={movie.movie_title}>
+                        <TableCell className="font-medium">{movie.movie_title}</TableCell>
+                        <TableCell className="text-right">{formatUSD(movie.total_revenue)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-muted-foreground">
+                        No data available
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
           {/* ── Agent Chat ────────────────────────────────────────────────── */}
           <section>
@@ -116,10 +178,14 @@ export default function DashboardPage() {
 // ── KPI Card sub-component ─────────────────────────────────────────────────────
 function KpiCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-foreground">{value}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
-    </div>
+    <Card>
+      <CardHeader className="p-4 pb-2">
+        <CardDescription className="text-xs uppercase tracking-wide">{label}</CardDescription>
+        <CardTitle className="text-2xl">{value}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-0">
+        <p className="text-xs text-muted-foreground">{sub}</p>
+      </CardContent>
+    </Card>
   );
 }
