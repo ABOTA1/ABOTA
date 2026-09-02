@@ -46,7 +46,7 @@ export default function DashboardPage() {
     <AppShell>
       <div className="mx-auto max-w-[1600px] p-4 sm:p-6 xl:grid xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start xl:gap-6">
         <div className="min-w-0 space-y-6">
-          <section id="kpis" className="scroll-mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <section id="kpis" className="scroll-mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
             <KpiCard
               label="Top Movie Revenue"
               value={
@@ -252,7 +252,7 @@ function ChartCard({
 
 function KpiCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <Card>
+    <Card className="transition-transform duration-200 hover:-translate-y-0.5">
       <CardHeader className="p-4 pb-2">
         <CardDescription className="text-xs uppercase tracking-wide">{label}</CardDescription>
         <CardTitle className="text-2xl">{value}</CardTitle>
