@@ -1,8 +1,5 @@
 "use client";
 
-// components/charts/TrendChart.tsx – Recharts line chart for time-series data.
-// TODO: Wire this to the agent's line-chart responses.
-
 import {
   LineChart,
   Line,
@@ -14,46 +11,50 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ChartSeries } from "@/types/analytics";
+import { ChartTooltip } from "@/components/charts/ChartTooltip";
+import { CHART_COLORS } from "@/components/charts/chart-theme";
 
 interface TrendChartProps {
   series: ChartSeries[];
   height?: number;
 }
 
-const COLORS = [
-  "hsl(221.2 83.2% 53.3%)",
-  "hsl(142.1 76.2% 36.3%)",
-  "hsl(346.8 77.2% 49.8%)",
-  "hsl(43.3 96.4% 56.3%)",
-];
+export function flattenSeries(series: ChartSeries[]): Array<Record<string, string | number>> {
+  const rows = new Map<string, Record<string, string | number>>();
+  for (const s of series) {
+    for (const point of s.data) {
+      const row = rows.get(point.label) ?? { label: point.label };
+      row[s.name] = point.value;
+      rows.set(point.label, row);
+    }
+  }
+  return Array.from(rows.values());
+}
 
 export function TrendChart({ series, height = 240 }: TrendChartProps) {
-  // Flatten series into Recharts-compatible data format
-  const labels = series[0]?.data.map((p) => p.label) ?? [];
-  const data = labels.map((label, i) => {
-    const row: Record<string, string | number> = { label };
-    series.forEach((s) => {
-      row[s.name] = s.data[i]?.value ?? 0;
-    });
-    return row;
-  });
+  const data = flattenSeries(series);
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-        <YAxis tick={{ fontSize: 11 }} />
-        <Tooltip contentStyle={{ borderRadius: "8px", fontSize: "12px" }} />
-        <Legend />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={16} />
+        <YAxis tick={{ fontSize: 11 }} width={40} />
+        <Tooltip
+          cursor={{ stroke: "hsl(var(--border))" }}
+          content={<ChartTooltip />}
+        />
+        <Legend wrapperStyle={{ fontSize: 12 }} />
         {series.map((s, idx) => (
           <Line
             key={s.name}
             type="monotone"
             dataKey={s.name}
-            stroke={COLORS[idx % COLORS.length]}
+            name={s.name}
+            stroke={CHART_COLORS[idx % CHART_COLORS.length]}
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 4 }}
           />
         ))}
       </LineChart>

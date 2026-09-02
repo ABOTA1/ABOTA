@@ -12,15 +12,29 @@ from app.db.clickhouse_client import execute_query
 
 
 def get_top_movies_by_revenue(limit: int = 10) -> List[Dict[str, Any]]:
-    """Return the top N movies ranked by total box-office revenue."""
+    """Return the top N movies ranked by total box-office revenue, with social mentions."""
     sql = f"""
         SELECT
-            content_title AS movie_title,
-            SUM(daily_revenue) AS total_revenue
-        FROM box_office_metrics
-        GROUP BY content_title
+            b.content_title AS movie_title,
+            b.total_revenue AS total_revenue,
+            COALESCE(m.total_mentions, 0) AS total_mentions
+        FROM (
+            SELECT
+                content_title,
+                any(content_id) AS content_id,
+                SUM(daily_revenue) AS total_revenue
+            FROM box_office_metrics
+            GROUP BY content_title
+        ) AS b
+        LEFT JOIN (
+            SELECT
+                content_id,
+                count() AS total_mentions
+            FROM social_mentions
+            GROUP BY content_id
+        ) AS m ON b.content_id = m.content_id
         ORDER BY total_revenue DESC
-        LIMIT {limit}
+        LIMIT {int(limit)}
     """
     return execute_query(sql)
 
@@ -69,5 +83,18 @@ def get_platform_breakdown() -> List[Dict[str, Any]]:
             GROUP BY b_sub.platform
         ) AS s ON b.platform = s.platform
         ORDER BY total_revenue DESC
+    """
+    return execute_query(sql)
+
+
+def get_mentions_trend() -> List[Dict[str, Any]]:
+    """Weekly social-mention volume for the dashboard line chart."""
+    sql = """
+        SELECT
+            toString(toStartOfWeek(event_time)) AS label,
+            count() AS mentions
+        FROM social_mentions
+        GROUP BY toStartOfWeek(event_time)
+        ORDER BY toStartOfWeek(event_time) ASC
     """
     return execute_query(sql)
