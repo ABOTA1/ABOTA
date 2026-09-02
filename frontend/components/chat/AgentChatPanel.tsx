@@ -92,7 +92,7 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-full border border-border transition-all duration-150 hover:bg-accent hover:border-primary/40 hover:text-foreground active:scale-95"
                 >
                   {s}
                 </button>
@@ -102,10 +102,16 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div
+            key={i}
+            className={cn(
+              "flex gap-2 animate-message-in",
+              msg.role === "user" ? "justify-end" : "justify-start",
+            )}
+          >
             {msg.role === "agent" && <Bot className="w-4 h-4 mt-1 text-primary shrink-0" />}
             <div
-              className={`max-w-[80%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
+              className={`max-w-[80%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap shadow-sm ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-foreground"
@@ -128,7 +134,7 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
         ))}
 
         {loading && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 animate-message-in">
             <Bot className="w-4 h-4 mt-1 text-primary" />
             <div className="bg-muted rounded-xl px-3 py-2 flex items-center gap-1.5">
               <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
@@ -153,7 +159,7 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
         <button
           onClick={() => sendMessage(input)}
           disabled={loading || !input.trim()}
-          className="p-1.5 rounded-lg text-primary hover:bg-accent disabled:opacity-40 transition-colors"
+          className="p-1.5 rounded-lg text-primary transition-all duration-150 hover:bg-accent disabled:opacity-40 active:scale-90"
         >
           <Send className="w-4 h-4" />
         </button>
