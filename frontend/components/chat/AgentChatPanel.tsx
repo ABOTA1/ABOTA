@@ -6,6 +6,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { askAgent } from "@/lib/api";
 import type { AnalyticsResult, ChatResponse } from "@/types/analytics";
 
@@ -19,6 +20,7 @@ interface Message {
 interface AgentChatPanelProps {
   /** Called when the agent returns analytics data – use to update charts on the dashboard */
   onAnalytics?: (analytics: AnalyticsResult | null) => void;
+  className?: string;
 }
 
 // Suggested starter questions shown before first message
@@ -29,7 +31,7 @@ const SUGGESTIONS = [
   "¿Qué día tuvo mayor recaudación en el periodo?",
 ];
 
-export function AgentChatPanel({ onAnalytics }: AgentChatPanelProps) {
+export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,7 +70,7 @@ export function AgentChatPanel({ onAnalytics }: AgentChatPanelProps) {
   }
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm flex flex-col h-[480px]">
+    <div className={cn("rounded-xl border bg-card shadow-sm flex flex-col min-h-[24rem] h-[min(32rem,70vh)]", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b">
         <Bot className="w-4 h-4 text-primary" />
@@ -79,9 +81,11 @@ export function AgentChatPanel({ onAnalytics }: AgentChatPanelProps) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center gap-3 mt-6">
-            <p className="text-sm text-muted-foreground text-center">
-              Ask a business question about box office, streaming, or social trends.
+          <div className="flex flex-col items-center gap-3 mt-8 px-2">
+            <Bot className="w-8 h-8 text-muted-foreground/70" />
+            <p className="text-sm font-medium text-center">No questions yet</p>
+            <p className="text-xs text-muted-foreground text-center max-w-sm">
+              Ask about box office, streaming, or social trends. The chart on this dashboard updates when the agent returns data.
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {SUGGESTIONS.map((s) => (
