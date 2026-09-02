@@ -5,7 +5,10 @@
 
 import { useEffect, useState } from "react";
 import { AgentChatPanel } from "@/components/chat/AgentChatPanel";
+import { AnalyticsChart } from "@/components/charts/AnalyticsChart";
 import { BoxOfficeChart } from "@/components/charts/BoxOfficeChart";
+import { PlatformShareChart } from "@/components/charts/PlatformShareChart";
+import { TrendChart } from "@/components/charts/TrendChart";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import {
@@ -92,7 +95,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {kpis?.top_movies ? (
+                {kpis?.top_movies?.length ? (
                   <BoxOfficeChart data={kpis.top_movies} />
                 ) : (
                   <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
@@ -102,21 +105,59 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Agent-driven chart: updates when the agent returns analytics */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-muted-foreground">
-                  {agentAnalytics?.title ?? "Agent Chart"}
+                  Mentions trend
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {kpis?.mentions_trend?.length ? (
+                  <TrendChart
+                    series={[
+                      {
+                        name: "Mentions",
+                        data: kpis.mentions_trend.map((point) => ({
+                          label: point.label,
+                          value: point.mentions,
+                        })),
+                      },
+                    ]}
+                  />
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+                    {loading ? "Loading data…" : "No data available"}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                  Social share / streaming platforms
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {kpis?.platform_breakdown?.length ? (
+                  <PlatformShareChart data={kpis.platform_breakdown} />
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+                    {loading ? "Loading data…" : "No data available"}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                  {agentAnalytics?.title || "Agent Chart"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {agentAnalytics?.series?.length ? (
-                  <BoxOfficeChart
-                    data={agentAnalytics.series[0].data.map((p) => ({
-                      movie_title: p.label,
-                      total_revenue: p.value,
-                    }))}
-                  />
+                  <AnalyticsChart analytics={agentAnalytics} />
                 ) : (
                   <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
                     Ask the agent a question to populate this chart.
@@ -137,12 +178,13 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>Movie</TableHead>
                     <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-right">Mentions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-muted-foreground">
+                      <TableCell colSpan={3} className="text-muted-foreground">
                         Loading…
                       </TableCell>
                     </TableRow>
@@ -151,11 +193,14 @@ export default function DashboardPage() {
                       <TableRow key={movie.movie_title}>
                         <TableCell className="font-medium">{movie.movie_title}</TableCell>
                         <TableCell className="text-right">{formatUSD(movie.total_revenue)}</TableCell>
+                        <TableCell className="text-right">
+                          {movie.total_mentions != null ? formatCompact(movie.total_mentions) : "—"}
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-muted-foreground">
+                      <TableCell colSpan={3} className="text-muted-foreground">
                         No data available
                       </TableCell>
                     </TableRow>

@@ -1,8 +1,5 @@
 "use client";
 
-// components/charts/BoxOfficeChart.tsx – Recharts bar chart for revenue data.
-// TODO: Replace with your final chart design / add more series.
-
 import {
   BarChart,
   Bar,
@@ -12,16 +9,23 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { formatUSD } from "@/lib/utils";
+import { ChartTooltip } from "@/components/charts/ChartTooltip";
+import { CHART_COLORS } from "@/components/charts/chart-theme";
+
+export interface BoxOfficePoint {
+  movie_title: string;
+  total_revenue: number;
+  total_mentions?: number;
+}
 
 interface BoxOfficeChartProps {
-  data: Array<{ movie_title: string; total_revenue: number }>;
+  data: BoxOfficePoint[];
 }
 
 export function BoxOfficeChart({ data }: BoxOfficeChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 60 }}>
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 56 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
         <XAxis
           dataKey="movie_title"
@@ -33,12 +37,18 @@ export function BoxOfficeChart({ data }: BoxOfficeChartProps) {
         <YAxis
           tickFormatter={(v: number) => `$${(v / 1_000_000).toFixed(1)}M`}
           tick={{ fontSize: 11 }}
+          width={48}
         />
         <Tooltip
-          formatter={(value: number) => [formatUSD(value), "Revenue"]}
-          contentStyle={{ borderRadius: "8px", fontSize: "12px" }}
+          cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.45 }}
+          content={<ChartTooltip />}
         />
-        <Bar dataKey="total_revenue" fill="hsl(221.2 83.2% 53.3%)" radius={[4, 4, 0, 0]} />
+        <Bar
+          dataKey="total_revenue"
+          name="Revenue"
+          fill={CHART_COLORS[0]}
+          radius={[4, 4, 0, 0]}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

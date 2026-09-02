@@ -6,7 +6,11 @@ import logging
 from typing import Any, Dict
 
 from app.agent.gemini_client import run_agent
-from app.db.queries import get_top_movies_by_revenue, get_platform_breakdown
+from app.db.queries import (
+    get_top_movies_by_revenue,
+    get_platform_breakdown,
+    get_mentions_trend,
+)
 from app.models.schemas import AnalyticsResult, ChatResponse, ChartSeries, SeriesPoint
 
 logger = logging.getLogger(__name__)
@@ -34,9 +38,11 @@ def get_kpi_snapshot() -> Dict[str, Any]:
     try:
         top_movies = get_top_movies_by_revenue(limit=5)
         platforms = get_platform_breakdown()
+        mentions_trend = get_mentions_trend()
         return {
             "top_movies": top_movies,
             "platform_breakdown": platforms,
+            "mentions_trend": mentions_trend,
         }
     except Exception as exc:
         logger.error("KPI snapshot error: %s", exc)
