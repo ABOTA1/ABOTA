@@ -9,7 +9,7 @@ export function AnalyticsChart({ analytics }: { analytics: AnalyticsResult }) {
   const primary = analytics.series[0];
   if (!primary?.data?.length) {
     return (
-      <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+      <div className="h-full min-h-[12rem] flex items-center justify-center text-muted-foreground text-sm">
         No chart series in this result.
       </div>
     );

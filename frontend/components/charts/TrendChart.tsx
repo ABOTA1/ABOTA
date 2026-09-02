@@ -16,7 +16,7 @@ import { CHART_COLORS } from "@/components/charts/chart-theme";
 
 interface TrendChartProps {
   series: ChartSeries[];
-  height?: number;
+  height?: number | string;
 }
 
 export function flattenSeries(series: ChartSeries[]): Array<Record<string, string | number>> {
@@ -31,11 +31,11 @@ export function flattenSeries(series: ChartSeries[]): Array<Record<string, strin
   return Array.from(rows.values());
 }
 
-export function TrendChart({ series, height = 240 }: TrendChartProps) {
+export function TrendChart({ series, height }: TrendChartProps) {
   const data = flattenSeries(series);
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height ?? "100%"}>
       <LineChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
         <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={16} />
