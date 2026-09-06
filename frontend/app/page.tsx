@@ -44,7 +44,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-[1760px] p-4 sm:p-5 xl:flex xl:h-[calc(100dvh-3.5rem)] xl:gap-6 xl:overflow-hidden xl:p-6">
+      <div className="mx-auto flex max-w-[1760px] flex-col p-4 sm:p-5 xl:h-[calc(100dvh-3.5rem)] xl:flex-row xl:gap-6 xl:overflow-hidden xl:p-6">
         <div className="min-w-0 flex-1 space-y-5 xl:overflow-y-auto xl:pr-1">
           <div>
             <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Live analytics</h1>
