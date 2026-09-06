@@ -22,6 +22,7 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
+import certifi
 from google import genai
 from google.genai import types
 
@@ -145,13 +146,20 @@ def _build_mcp_env() -> Dict[str, str]:
         "CLICKHOUSE_PORT": settings.clickhouse_port,
         "CLICKHOUSE_USER": settings.clickhouse_user,
         "CLICKHOUSE_PASSWORD": settings.clickhouse_password,
-        "CLICKHOUSE_SECURE": "1" if settings.clickhouse_secure else "0",
+        "CLICKHOUSE_SECURE": "true" if settings.clickhouse_secure else "false",
         "CLICKHOUSE_DATABASE": settings.clickhouse_database,
     }
     env = dict(os.environ)
     for key, value in overrides.items():
         if value is not None:
             env[key] = str(value)
+    # mcp-clickhouse's clickhouse-connect client verifies TLS against the
+    # process CA bundle. Point it at certifi so Cloud HTTPS works in slim
+    # images / sandboxes that lack a system CA store.
+    ca_bundle = certifi.where()
+    env.setdefault("SSL_CERT_FILE", ca_bundle)
+    env.setdefault("REQUESTS_CA_BUNDLE", ca_bundle)
+    env.setdefault("CURL_CA_BUNDLE", ca_bundle)
     return env
 
 
@@ -188,10 +196,26 @@ def _format_mcp_result_to_analytics(tool_name: str, args: dict, result_text: str
         # Some MCP ClickHouse servers wrap rows in an envelope dict instead
         # of returning a bare list.
         if isinstance(data, dict):
-            for key in ("data", "rows", "result", "results"):
-                if isinstance(data.get(key), list):
-                    data = data[key]
-                    break
+            columns = data.get("columns")
+            rows = data.get("rows")
+            if (
+                isinstance(columns, list)
+                and columns
+                and isinstance(rows, list)
+                and rows
+                and not isinstance(rows[0], dict)
+            ):
+                clean_cols = [str(col).split(".")[-1] for col in columns]
+                data = [
+                    dict(zip(clean_cols, row))
+                    for row in rows
+                    if isinstance(row, (list, tuple))
+                ]
+            else:
+                for key in ("data", "rows", "result", "results"):
+                    if isinstance(data.get(key), list):
+                        data = data[key]
+                        break
 
         if isinstance(data, list) and data and isinstance(data[0], dict):
             columns = list(data[0].keys())
@@ -336,7 +360,7 @@ async def run_agent(question: str) -> Dict[str, Any]:
                     contents.append(candidate.content)
                     contents.append(
                         types.Content(
-                            role="tool",
+                            role="user",
                             parts=[
                                 types.Part(
                                     function_response=types.FunctionResponse(
@@ -348,16 +372,22 @@ async def run_agent(question: str) -> Dict[str, Any]:
                         )
                     )
 
-                    final_response = client.models.generate_content(
-                        model=settings.gemini_model,
-                        contents=contents,
-                        config=types.GenerateContentConfig(
-                            system_instruction=SYSTEM_PROMPT,
-                            tools=[gemini_tools],
-                            temperature=0.2,
-                        ),
-                    )
-                    answer = (final_response.text or "").strip() or "Analysis complete."
+                    try:
+                        final_response = client.models.generate_content(
+                            model=settings.gemini_model,
+                            contents=contents,
+                            config=types.GenerateContentConfig(
+                                system_instruction=SYSTEM_PROMPT,
+                                temperature=0.2,
+                            ),
+                        )
+                        answer = _response_text(final_response) or _fallback_answer_from_tool(
+                            tool_response_payload
+                        )
+                    except Exception as gen_exc:
+                        logger.exception("Gemini follow-up after tool call failed")
+                        error = str(gen_exc)
+                        answer = _fallback_answer_from_tool(tool_response_payload)
 
                 else:
                     answer = candidate_parts[0].text if candidate_parts and getattr(candidate_parts[0], "text", None) else ""
@@ -371,6 +401,34 @@ async def run_agent(question: str) -> Dict[str, Any]:
         analytics.insights = _generate_insights(analytics)
 
     return {"answer": answer, "analytics": analytics, "error": error}
+
+
+def _response_text(response: Any) -> str:
+    """Collect text from a GenerateContent response, including part-only payloads."""
+    direct = (getattr(response, "text", None) or "").strip()
+    if direct:
+        return direct
+    texts: List[str] = []
+    for candidate in getattr(response, "candidates", None) or []:
+        content = getattr(candidate, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            text = getattr(part, "text", None)
+            if text:
+                texts.append(text)
+    return "\n".join(texts).strip()
+
+
+def _fallback_answer_from_tool(payload: Dict[str, Any]) -> str:
+    """Keep a usable answer if Gemini rejects the function-response follow-up."""
+    if payload.get("error"):
+        return f"The database query could not be completed: {payload['error']}"
+    result = payload.get("result")
+    if isinstance(result, str) and result.strip():
+        snippet = result.strip()
+        if len(snippet) > 1200:
+            snippet = snippet[:1200] + "…"
+        return "Query completed. Here is the raw result:\n" + snippet
+    return "Query completed, but I could not generate a summary."
 
 
 def _generate_insights(analytics: AnalyticsResult) -> List[str]:
