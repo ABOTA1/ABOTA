@@ -112,6 +112,15 @@ All API schemas live in [`backend/app/models/schemas.py`](file:///c:/Users/JUAN%
 Database Name: `abota`
 
 ### Active Tables (in `backend/scripts/seed_clickhouse.py`):
+- **`content_catalog`** (dimension; join to fact tables on `content_id`):
+  - `content_id` (`String`)
+  - `content_title` (`String`)
+  - `genre` (`LowCardinality(String)`) – `Sci-Fi`, `Action`, `Thriller`, `Drama`, `Romance`, `Superhero`, `Fantasy`, `Horror`
+  - `budget_usd` (`Float64`)
+  - `country` (`LowCardinality(String)`)
+  - `release_year` (`UInt16`)
+  - Engine: `MergeTree()` ORDER BY `(content_id)`
+
 - **`box_office_metrics`**:
   - `content_id` (`String`)
   - `content_title` (`String`)
