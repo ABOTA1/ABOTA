@@ -146,7 +146,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Top movies</CardTitle>
-                <CardDescription>Revenue ranking from the latest KPI snapshot</CardDescription>
+                  <CardDescription>Revenue ranking from the latest KPI snapshot, with catalog genre and country</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -157,6 +157,8 @@ export default function DashboardPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Movie</TableHead>
+                          <TableHead>Genre</TableHead>
+                          <TableHead>Country</TableHead>
                           <TableHead className="text-right">Revenue</TableHead>
                           <TableHead className="text-right">Mentions</TableHead>
                         </TableRow>
@@ -165,6 +167,8 @@ export default function DashboardPage() {
                         {kpis.top_movies.map((movie) => (
                           <TableRow key={movie.movie_title}>
                             <TableCell className="font-medium">{movie.movie_title}</TableCell>
+                            <TableCell>{movie.genre ?? "—"}</TableCell>
+                            <TableCell>{movie.country ?? "—"}</TableCell>
                             <TableCell className="text-right">{formatUSD(movie.total_revenue)}</TableCell>
                             <TableCell className="text-right">
                               {movie.total_mentions != null ? formatCompact(movie.total_mentions) : "—"}
