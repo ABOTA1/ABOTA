@@ -41,7 +41,7 @@ You do **not** need a local venv or a global `npm install` for day-to-day work.
    cd ABOTA
    ```
 
-2. **Configure secrets** (this file is gitignored)
+2. **Configure secrets** (`backend/.env` is gitignored and will not be pushed)
    ```bash
    cp backend/.env.example backend/.env
    ```
@@ -50,19 +50,20 @@ You do **not** need a local venv or a global `npm install` for day-to-day work.
    - `CLICKHOUSE_HOST=your-instance.clickhouse.cloud`
    - `CLICKHOUSE_PASSWORD=your_cloud_password_here`
 
-3. **Launch backend + frontend**
+3. **Launch backend + frontend + one-shot Cloud seed**
    ```bash
    docker compose up --build
    ```
    The backend image installs `backend/requirements.txt`. The frontend image runs `npm ci` from `frontend/package-lock.json`.
 
-4. **Seed ClickHouse once**
-   ```bash
-   docker compose run --rm seed
-   ```
-   Safe to re-run: it skips if data already exists. Use `docker compose run --rm seed python -m scripts.seed_clickhouse --force` only if you want another batch.
+   The `seed` service talks to **ClickHouse Cloud** (there is no local `clickhouse-server`). It creates `content_catalog`, `box_office_metrics`, `streaming_activity`, and `social_mentions`, then exits. Safe to re-run: it skips fact inserts if data already exists.
 
-5. **Open the dashboard**
+   To insert another fact batch (and refresh the catalog):
+   ```bash
+   docker compose run --rm seed python -m scripts.seed_clickhouse --force
+   ```
+
+4. **Open the dashboard**
    [http://localhost:3000](http://localhost:3000)  
    API health: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 

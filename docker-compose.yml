@@ -1,5 +1,9 @@
 name: abota
 
+# ClickHouse lives in ClickHouse Cloud — this compose file does not start a
+# local clickhouse-server. backend/.env must contain CLICKHOUSE_HOST and
+# CLICKHOUSE_PASSWORD from the Cloud console (see backend/.env.example).
+
 services:
   backend:
     build:
@@ -47,18 +51,25 @@ services:
       backend:
         condition: service_healthy
 
+  # One-shot schema + catalog + fact seed against ClickHouse Cloud.
+  # Exits 0 when data already exists (safe on every `docker compose up`).
   seed:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: abota_seed
+    restart: "no"
     env_file:
       - ./backend/.env
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
     volumes:
       - ./backend:/app
     command: python -m scripts.seed_clickhouse
-    restart: "no"
-    profiles: ["seed"]
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   frontend_node_modules:

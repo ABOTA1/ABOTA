@@ -10,6 +10,7 @@ from app.db.queries import (
     get_top_movies_by_revenue,
     get_platform_breakdown,
     get_mentions_trend,
+    get_genre_breakdown,
 )
 from app.models.schemas import AnalyticsResult, ChatResponse, ChartSeries, SeriesPoint
 
@@ -39,10 +40,12 @@ def get_kpi_snapshot() -> Dict[str, Any]:
         top_movies = get_top_movies_by_revenue(limit=5)
         platforms = get_platform_breakdown()
         mentions_trend = get_mentions_trend()
+        genre_breakdown = get_genre_breakdown()
         return {
             "top_movies": top_movies,
             "platform_breakdown": platforms,
             "mentions_trend": mentions_trend,
+            "genre_breakdown": genre_breakdown,
         }
     except Exception as exc:
         logger.error("KPI snapshot error: %s", exc)

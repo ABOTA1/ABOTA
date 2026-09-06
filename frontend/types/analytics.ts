@@ -36,6 +36,15 @@ export interface MovieKpi {
   movie_title: string;
   total_revenue: number;
   total_mentions?: number;
+  genre?: string;
+  country?: string;
+  budget_usd?: number;
+}
+
+export interface GenreBreakdown {
+  genre: string;
+  titles: number;
+  total_revenue: number;
 }
 
 export interface PlatformBreakdown {
@@ -54,5 +63,6 @@ export interface KpiSnapshot {
   top_movies: MovieKpi[];
   platform_breakdown: PlatformBreakdown[];
   mentions_trend?: MentionsTrendPoint[];
+  genre_breakdown?: GenreBreakdown[];
   error?: string;
 }
