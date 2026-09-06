@@ -32,7 +32,10 @@ export function Header() {
         >
           Agent
         </a>
-        <span className="text-xs text-muted-foreground hidden sm:inline">Hackathon Demo</span>
+        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+          Live Cloud
+        </span>
         <ThemeToggle />
       </div>
     </header>

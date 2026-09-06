@@ -25,10 +25,10 @@ interface AgentChatPanelProps {
 
 // Suggested starter questions shown before first message
 const SUGGESTIONS = [
-  "¿Cuáles son las 5 películas con mayor taquilla total?",
-  "Muéstrame la tendencia de ingresos de Neon Dragons",
-  "Compara las menciones sociales por plataforma",
-  "¿Qué día tuvo mayor recaudación en el periodo?",
+  "Which 5 movies have the highest total box office?",
+  "Show the weekly social mentions trend",
+  "Compare revenue share by platform",
+  "Which genre has the strongest revenue versus budget?",
 ];
 
 export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) {
@@ -70,7 +70,7 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
   }
 
   return (
-    <div className={cn("rounded-xl border bg-card shadow-sm flex flex-col min-h-[24rem] h-[min(32rem,70vh)]", className)}>
+    <div className={cn("flex min-h-[24rem] flex-col rounded-xl border bg-card shadow-sm", className)}>
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b">
         <Bot className="w-4 h-4 text-primary" />
@@ -83,9 +83,9 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
         {messages.length === 0 && (
           <div className="flex flex-col items-center gap-3 mt-8 px-2">
             <Bot className="w-8 h-8 text-muted-foreground/70" />
-            <p className="text-sm font-medium text-center">No questions yet</p>
+            <p className="text-sm font-medium text-center">Ask a business question</p>
             <p className="text-xs text-muted-foreground text-center max-w-sm">
-              Ask about box office, streaming, or social trends. The chart on this dashboard updates when the agent returns data.
+              Ranking, trends, platform mix, or crossed metrics. The chart above updates when results arrive.
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {SUGGESTIONS.map((s) => (
@@ -152,7 +152,7 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-          placeholder="Ask about box office, trends, platforms…"
+          placeholder="Ask about revenue, mentions, or platforms…"
           disabled={loading}
           className="flex-1"
         />
