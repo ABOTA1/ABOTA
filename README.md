@@ -41,7 +41,7 @@ You do **not** need a local venv or a global `npm install` for day-to-day work.
    cd ABOTA
    ```
 
-2. **Configure secrets** (this file is gitignored)
+2. **Configure secrets** (`backend/.env` is gitignored and will not be pushed)
    ```bash
    cp backend/.env.example backend/.env
    ```
