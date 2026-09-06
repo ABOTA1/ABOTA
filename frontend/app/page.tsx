@@ -44,68 +44,74 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-[1600px] p-4 sm:p-6 xl:grid xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start xl:gap-6">
-        <div className="min-w-0 space-y-6">
-          <section id="kpis" className="scroll-mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+      <div className="mx-auto max-w-[1760px] p-4 sm:p-5 xl:flex xl:h-[calc(100dvh-3.5rem)] xl:gap-6 xl:overflow-hidden xl:p-6">
+        <div className="min-w-0 flex-1 space-y-5 xl:overflow-y-auto xl:pr-1">
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Live analytics</h1>
+            <p className="text-sm text-muted-foreground">
+              Box office, streaming, and social sentiment from ClickHouse Cloud.
+            </p>
+          </div>
+
+          <section id="kpis" className="scroll-mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <KpiCard
-              label="Top Movie Revenue"
+              label="Top movie revenue"
+              loading={loading}
               value={
-                loading
-                  ? "Loading…"
-                  : kpis?.top_movies?.[0]
+                kpis?.top_movies?.[0]
                   ? formatUSD(kpis.top_movies[0].total_revenue)
-                  : "N/A"
+                  : "—"
               }
-              sub={kpis?.top_movies?.[0]?.movie_title ?? (error ? "Could not load KPIs" : "")}
+              sub={kpis?.top_movies?.[0]?.movie_title ?? (error ? "Could not load KPIs" : "Highest title")}
             />
             <KpiCard
-              label="Total Platforms"
-              value={loading ? "Loading…" : String(kpis?.platform_breakdown?.length ?? 0)}
-              sub="Streaming + Theaters"
+              label="Platforms"
+              loading={loading}
+              value={String(kpis?.platform_breakdown?.length ?? 0)}
+              sub="Streaming + theaters"
             />
             <KpiCard
-              label="Avg Social Mentions"
+              label="Avg. social mentions"
+              loading={loading}
               value={
-                loading
-                  ? "Loading…"
-                  : kpis?.platform_breakdown?.length
+                kpis?.platform_breakdown?.length
                   ? formatCompact(
                       kpis.platform_breakdown.reduce((s, p) => s + p.total_mentions, 0) /
                         kpis.platform_breakdown.length,
                     )
-                  : "N/A"
+                  : "—"
               }
               sub="Per platform"
             />
             <KpiCard
-              label="Agent queries"
-              value={agentAnalytics ? "Updated" : "Waiting"}
-              sub={agentAnalytics ? "Chart synced from chat" : "Ask anything in chat"}
+              label="Agent chart"
+              value={agentAnalytics ? "Synced" : "Ready"}
+              sub={agentAnalytics ? "Updated from last question" : "Ask in the agent panel"}
             />
           </section>
 
-          <section id="charts" className="scroll-mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartCard title="Box Office – Top Movies">
+          <section id="charts" className="scroll-mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 xl:gap-5">
+            <ChartCard title="Box office" description="Top titles by total revenue">
               {kpis?.top_movies?.length ? (
-                <div className="h-[220px] sm:h-[260px] w-full min-w-0">
+                <div className="h-[220px] sm:h-[240px] xl:h-[260px] w-full min-w-0">
                   <BoxOfficeChart data={kpis.top_movies} />
                 </div>
               ) : (
                 <EmptyState
                   icon={BarChart2}
-                  title={loading ? "Loading box office…" : "No box-office data"}
+                  title={loading ? "Loading box office" : "No box-office data"}
                   description={
                     error
                       ? "The KPI snapshot could not be loaded. Check the API and try again."
-                      : "Seed ClickHouse to see top-movie revenue bars here."
+                      : "Seed ClickHouse to see top-movie revenue here."
                   }
                 />
               )}
             </ChartCard>
 
-            <ChartCard title="Mentions trend">
+            <ChartCard title="Mentions trend" description="Weekly social volume">
               {kpis?.mentions_trend?.length ? (
-                <div className="h-[220px] sm:h-[260px] w-full min-w-0">
+                <div className="h-[220px] sm:h-[240px] xl:h-[260px] w-full min-w-0">
                   <TrendChart
                     series={[
                       {
@@ -121,36 +127,40 @@ export default function DashboardPage() {
               ) : (
                 <EmptyState
                   icon={LineChart}
-                  title={loading ? "Loading mentions…" : "No mentions trend"}
-                  description="Weekly social volume appears here once the snapshot includes mentions_trend."
+                  title={loading ? "Loading mentions" : "No mentions trend"}
+                  description="Weekly social volume appears here once the snapshot includes mentions."
                 />
               )}
             </ChartCard>
 
-            <ChartCard title="Social share / streaming platforms" className="lg:col-span-2">
+            <ChartCard
+              title="Platform mix"
+              description="Revenue share across theatrical and streaming"
+              className="lg:col-span-2"
+            >
               {kpis?.platform_breakdown?.length ? (
-                <div className="h-[220px] sm:h-[260px] w-full min-w-0 max-w-xl mx-auto">
+                <div className="h-[220px] sm:h-[240px] xl:h-[260px] w-full min-w-0 max-w-xl mx-auto">
                   <PlatformShareChart data={kpis.platform_breakdown} />
                 </div>
               ) : (
                 <EmptyState
                   icon={PieChart}
-                  title={loading ? "Loading platforms…" : "No platform share"}
-                  description="Streaming and theatrical mix shows up here after a successful KPI fetch."
+                  title={loading ? "Loading platforms" : "No platform share"}
+                  description="Streaming and theatrical mix shows up after a successful KPI fetch."
                 />
               )}
             </ChartCard>
           </section>
 
-          <section id="data" className="scroll-mt-4">
+          <section id="data" className="scroll-mt-4 pb-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Top movies</CardTitle>
-                  <CardDescription>Revenue ranking from the latest KPI snapshot, with catalog genre and country</CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold tracking-tight">Top movies</CardTitle>
+                <CardDescription>Revenue ranking with genre and origin country</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <EmptyState icon={Table2} title="Loading table…" description="Fetching the KPI snapshot." />
+                  <EmptyState icon={Table2} title="Loading table" description="Fetching the KPI snapshot." />
                 ) : kpis?.top_movies?.length ? (
                   <div className="overflow-x-auto">
                     <Table>
@@ -169,8 +179,8 @@ export default function DashboardPage() {
                             <TableCell className="font-medium">{movie.movie_title}</TableCell>
                             <TableCell>{movie.genre ?? "—"}</TableCell>
                             <TableCell>{movie.country ?? "—"}</TableCell>
-                            <TableCell className="text-right">{formatUSD(movie.total_revenue)}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right tabular-nums">{formatUSD(movie.total_revenue)}</TableCell>
+                            <TableCell className="text-right tabular-nums">
                               {movie.total_mentions != null ? formatCompact(movie.total_mentions) : "—"}
                             </TableCell>
                           </TableRow>
@@ -194,23 +204,27 @@ export default function DashboardPage() {
           </section>
         </div>
 
-        <aside className="mt-6 xl:mt-0 xl:sticky xl:top-4 min-w-0 space-y-4">
-          <Card id="agent-chart" className="scroll-mt-4">
+        <aside className="mt-6 flex min-h-0 w-full min-w-0 flex-col gap-4 xl:mt-0 xl:h-full xl:w-[26rem] xl:shrink-0">
+          <Card id="agent-chart" className="scroll-mt-4 shrink-0">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-muted-foreground">
-                {agentAnalytics?.title || "Agent chart"}
+              <CardTitle className="text-base font-semibold tracking-tight">
+                {agentAnalytics?.title || "Agent result"}
               </CardTitle>
+              {!agentAnalytics ? (
+                <CardDescription>Chart fills in after you ask a question</CardDescription>
+              ) : null}
             </CardHeader>
             <CardContent>
               {agentAnalytics?.series?.length ? (
-                <div className="h-[220px] sm:h-[280px] w-full min-w-0">
+                <div className="h-[200px] sm:h-[220px] xl:h-[240px] w-full min-w-0">
                   <AnalyticsChart analytics={agentAnalytics} />
                 </div>
               ) : (
                 <EmptyState
+                  className="min-h-[10rem] py-6"
                   icon={MessageSquare}
                   title="Waiting for a question"
-                  description="This chart stays empty until the agent returns analytics. Ask about box office, mentions, or platforms."
+                  description="Ask about box office, mentions, or platforms."
                 >
                   <a
                     href="#chat"
@@ -223,10 +237,10 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <section id="chat" className="scroll-mt-4">
+          <section id="chat" className="scroll-mt-4 flex min-h-[24rem] flex-1 flex-col xl:min-h-0">
             <AgentChatPanel
               onAnalytics={setAgentAnalytics}
-              className="h-[min(36rem,calc(100dvh-8rem))] xl:h-[min(36rem,calc(100dvh-22rem))]"
+              className="h-full min-h-[24rem] xl:min-h-0"
             />
           </section>
         </aside>
@@ -237,32 +251,55 @@ export default function DashboardPage() {
 
 function ChartCard({
   title,
+  description,
   children,
   className,
 }: {
   title: string;
+  description?: string;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
+        {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
   );
 }
 
-function KpiCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+function KpiCard({
+  label,
+  value,
+  sub,
+  loading,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  loading?: boolean;
+}) {
   return (
     <Card className="transition-transform duration-200 hover:-translate-y-0.5">
       <CardHeader className="p-4 pb-2">
-        <CardDescription className="text-xs uppercase tracking-wide">{label}</CardDescription>
-        <CardTitle className="text-2xl">{value}</CardTitle>
+        <CardDescription className="text-xs font-medium uppercase tracking-wide">
+          {label}
+        </CardDescription>
+        {loading ? (
+          <div className="mt-1 h-8 w-28 animate-pulse rounded-md bg-muted" />
+        ) : (
+          <CardTitle className="text-2xl tabular-nums tracking-tight">{value}</CardTitle>
+        )}
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <p className="text-xs text-muted-foreground">{sub}</p>
+        {loading ? (
+          <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+        ) : (
+          <p className="text-xs text-muted-foreground">{sub}</p>
+        )}
       </CardContent>
     </Card>
   );
