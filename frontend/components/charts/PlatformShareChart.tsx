@@ -27,9 +27,11 @@ export function PlatformShareChart({
   data,
   metric = "total_mentions",
 }: PlatformShareChartProps) {
+  const seriesName = metric === "total_revenue" ? "Revenue" : "Mentions";
   const total = data.reduce((sum, row) => sum + Number(row[metric] ?? 0), 0);
   const chartData = data.map((row) => ({
     ...row,
+    [seriesName]: Number(row[metric] ?? 0),
     share: total > 0 ? (Number(row[metric] ?? 0) / total) * 100 : 0,
   }));
 
@@ -38,7 +40,7 @@ export function PlatformShareChart({
       <PieChart>
         <Pie
           data={chartData}
-          dataKey={metric}
+          dataKey={seriesName}
           nameKey="platform"
           cx="50%"
           cy="50%"
