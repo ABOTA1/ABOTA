@@ -54,7 +54,7 @@ export default function TrendsPage() {
         >
           {platforms.length ? (
             <div className="mx-auto h-[320px] w-full min-w-0 max-w-lg sm:h-[380px]">
-              <PlatformShareChart data={platforms} />
+              <PlatformShareChart data={platforms} metric="total_revenue" />
             </div>
           ) : (
             <EmptyState
