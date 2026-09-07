@@ -1,10 +1,7 @@
 "use client";
 
-// components/chat/AgentChatPanel.tsx – Conversational interface with the Gemini agent.
-// Sends questions to POST /api/chat and displays answers + analytics.
-
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { askAgent } from "@/lib/api";
@@ -18,12 +15,10 @@ interface Message {
 }
 
 interface AgentChatPanelProps {
-  /** Called when the agent returns analytics data – use to update charts on the dashboard */
   onAnalytics?: (analytics: AnalyticsResult | null) => void;
   className?: string;
 }
 
-// Suggested starter questions shown before first message
 const SUGGESTIONS = [
   "Which 5 movies have the highest total box office?",
   "Show the weekly social mentions trend",
@@ -70,29 +65,36 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
   }
 
   return (
-    <div className={cn("flex min-h-[24rem] flex-col rounded-xl border bg-card shadow-sm", className)}>
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b">
-        <Bot className="w-4 h-4 text-primary" />
-        <span className="text-sm font-semibold">ABOTA Agent</span>
-        <span className="ml-auto text-xs text-muted-foreground">Powered by Gemini</span>
+    <div
+      className={cn(
+        "glass-card flex min-h-[24rem] flex-col overflow-hidden rounded-2xl shadow-glow",
+        className,
+      )}
+    >
+      <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+          <Bot className="h-4 w-4" />
+        </span>
+        <div>
+          <p className="font-display text-sm font-semibold leading-none">ABOTA Agent</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Gemini · ClickHouse Cloud</p>
+        </div>
+        <Sparkles className="ml-auto h-4 w-4 text-chart-3" />
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center gap-3 mt-8 px-2">
-            <Bot className="w-8 h-8 text-muted-foreground/70" />
-            <p className="text-sm font-medium text-center">Ask a business question</p>
-            <p className="text-xs text-muted-foreground text-center max-w-sm">
-              Ranking, trends, platform mix, or crossed metrics. The chart above updates when results arrive.
+          <div className="mt-6 flex flex-col items-center gap-3 px-2">
+            <p className="text-center font-display text-sm font-medium">Ask a business question</p>
+            <p className="max-w-sm text-center text-xs text-muted-foreground">
+              Ranking, trends, platform mix, or crossed metrics. The chart beside this panel updates when results arrive.
             </p>
-            <div className="flex flex-wrap gap-2 justify-center">
+            <div className="flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-border transition-all duration-150 hover:bg-accent hover:border-primary/40 hover:text-foreground active:scale-95"
+                  className="rounded-full border border-border/80 bg-background/40 px-3 py-1.5 text-xs transition-all duration-200 hover:border-primary/50 hover:bg-primary/10 hover:text-foreground active:scale-95"
                 >
                   {s}
                 </button>
@@ -109,12 +111,12 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
               msg.role === "user" ? "justify-end" : "justify-start",
             )}
           >
-            {msg.role === "agent" && <Bot className="w-4 h-4 mt-1 text-primary shrink-0" />}
+            {msg.role === "agent" && <Bot className="mt-1 h-4 w-4 shrink-0 text-primary" />}
             <div
-              className={`max-w-[80%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap shadow-sm ${
+              className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm shadow-sm ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground"
+                  : "bg-muted/80 text-foreground backdrop-blur-sm"
               }`}
             >
               {msg.text}
@@ -125,19 +127,17 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
                   ))}
                 </ul>
               ) : null}
-              {msg.error && (
-                <p className="mt-1 text-xs text-red-400">⚠ {msg.error}</p>
-              )}
+              {msg.error && <p className="mt-1 text-xs text-red-400">⚠ {msg.error}</p>}
             </div>
-            {msg.role === "user" && <User className="w-4 h-4 mt-1 text-muted-foreground shrink-0" />}
+            {msg.role === "user" && <User className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />}
           </div>
         ))}
 
         {loading && (
           <div className="flex gap-2 animate-message-in">
-            <Bot className="w-4 h-4 mt-1 text-primary" />
-            <div className="bg-muted rounded-xl px-3 py-2 flex items-center gap-1.5">
-              <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+            <Bot className="mt-1 h-4 w-4 text-primary" />
+            <div className="flex items-center gap-1.5 rounded-2xl bg-muted/80 px-3 py-2">
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Thinking…</span>
             </div>
           </div>
@@ -145,8 +145,7 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t px-3 py-2 flex gap-2">
+      <div className="flex gap-2 border-t border-border/60 bg-background/30 px-3 py-2">
         <Input
           type="text"
           value={input}
@@ -154,14 +153,15 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
           onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
           placeholder="Ask about revenue, mentions, or platforms…"
           disabled={loading}
-          className="flex-1"
+          className="flex-1 rounded-xl border-border/70 bg-background/50"
         />
         <button
           onClick={() => sendMessage(input)}
           disabled={loading || !input.trim()}
-          className="p-1.5 rounded-lg text-primary transition-all duration-150 hover:bg-accent disabled:opacity-40 active:scale-90"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all duration-200 hover:scale-105 hover:shadow-glow disabled:opacity-40 disabled:hover:scale-100"
+          aria-label="Send"
         >
-          <Send className="w-4 h-4" />
+          <Send className="h-4 w-4" />
         </button>
       </div>
     </div>
