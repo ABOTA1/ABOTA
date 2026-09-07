@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 3000
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]

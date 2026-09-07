@@ -16,6 +16,7 @@ from typing import Any, Sequence
 # Allow running from the backend/ directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import certifi
 import clickhouse_connect
 from app.config import get_settings
 
@@ -366,6 +367,9 @@ def main() -> None:
         username=settings.clickhouse_user,
         password=settings.clickhouse_password,
         secure=settings.clickhouse_secure,
+        connect_timeout=30,
+        send_receive_timeout=60,
+        ca_cert=certifi.where() if settings.clickhouse_secure else None,
     )
 
     _ensure_schema(client, settings.clickhouse_database)

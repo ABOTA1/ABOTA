@@ -64,8 +64,19 @@ You do **not** need a local venv or a global `npm install` for day-to-day work.
    ```
 
 4. **Open the dashboard**
-   [http://localhost:3000](http://localhost:3000)  
-   API health: [http://localhost:8000/api/health](http://localhost:8000/api/health)
+   [http://localhost:3000](http://localhost:3000)
+
+   The browser talks only to port 3000. Next.js proxies `/api/*` to FastAPI so Windows/Brave does not hit `localhost:8000` over IPv6 (that often shows as `net::ERR_EMPTY_RESPONSE` / `TypeError: Failed to fetch`).
+
+   Direct API health (use IPv4, not `localhost`, if Docker Desktop is involved):
+   [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
+
+### Troubleshooting: "Error connecting to the agent" / Failed to fetch
+
+1. Confirm **both** containers are up: `docker compose ps` — `abota_backend` must be healthy.
+2. Open [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health) (not `http://localhost:8000` on Windows).
+3. Pull the latest `main` so the dashboard uses same-origin `/api` instead of calling `:8000` from the browser.
+4. If you previously set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `frontend/.env.local`, remove that line and restart `npm run dev`.
 
 Stop with `Ctrl+C`, or `docker compose down`.
 

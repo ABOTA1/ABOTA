@@ -148,6 +148,8 @@ def _build_mcp_env() -> Dict[str, str]:
         "CLICKHOUSE_PASSWORD": settings.clickhouse_password,
         "CLICKHOUSE_SECURE": "true" if settings.clickhouse_secure else "false",
         "CLICKHOUSE_DATABASE": settings.clickhouse_database,
+        "CLICKHOUSE_CONNECT_TIMEOUT": "30",
+        "CLICKHOUSE_SEND_RECEIVE_TIMEOUT": "60",
     }
     env = dict(os.environ)
     for key, value in overrides.items():
