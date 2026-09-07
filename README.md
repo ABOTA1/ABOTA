@@ -71,9 +71,18 @@ You do **not** need a local venv or a global `npm install` for day-to-day work.
    Direct API health (use IPv4, not `localhost`, if Docker Desktop is involved):
    [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
 
+### Troubleshooting: frontend crash `exec docker-entrypoint.sh: no such file or directory`
+
+Windows Git may save `frontend/docker-entrypoint.sh` with CRLF. Alpine cannot run that file. Pull this repo (`.gitattributes` keeps `.sh` as LF) and rebuild without cache:
+
+```bash
+docker compose build --no-cache frontend
+docker compose up
+```
+
 ### Troubleshooting: "Error connecting to the agent" / Failed to fetch
 
-1. Confirm **both** containers are up: `docker compose ps` — `abota_backend` must be healthy.
+1. Confirm **both** containers are up: `docker compose ps` — `abota_backend` must be healthy and `abota_frontend` must be running (not restarting).
 2. Open [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health) (not `http://localhost:8000` on Windows).
 3. Pull the latest `main` so the dashboard uses same-origin `/api` instead of calling `:8000` from the browser.
 4. If you previously set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `frontend/.env.local`, remove that line and restart `npm run dev`.
