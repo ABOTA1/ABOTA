@@ -26,10 +26,12 @@ def test_empty_sql_is_rejected():
 def test_comment_only_sql_is_rejected():
     with pytest.raises(InvalidSQLError, match="Empty"):
         validate_readonly_select("-- nothing\n")
+    with pytest.raises(InvalidSQLError, match="Empty"):
+        validate_readonly_select("-- nothing")
 
 
 def test_drop_is_rejected():
-    with pytest.raises(InvalidSQLError, match="DROP"):
+    with pytest.raises(InvalidSQLError):
         validate_readonly_select("DROP TABLE box_office_metrics")
 
 

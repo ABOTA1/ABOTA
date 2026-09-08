@@ -4,7 +4,7 @@ import re
 
 from app.db.errors import InvalidSQLError
 
-_LEADING_COMMENT_RE = re.compile(r"^(\s*--[^\n]*\n|\s*/\*.*?\*/\s*)+", re.DOTALL)
+_LEADING_COMMENT_RE = re.compile(r"^(\s*--[^\n]*(?:\n|$|\Z)|\s*/\*.*?\*/\s*)+", re.DOTALL)
 _READONLY_PREFIX_RE = re.compile(r"^(SELECT|WITH)\b", re.IGNORECASE)
 
 _FORBIDDEN_KEYWORDS = (
