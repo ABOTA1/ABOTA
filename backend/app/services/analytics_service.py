@@ -7,6 +7,8 @@ from typing import Any, Dict
 
 from app.agent.gemini_client import run_agent
 from app.db.queries import (
+    get_genre_breakdown,
+    get_mentions_trend,
     get_metrics_summary as query_metrics_summary,
     get_platform_breakdown,
     get_top_movies_by_revenue,
@@ -38,9 +40,13 @@ def get_kpi_snapshot() -> Dict[str, Any]:
     try:
         top_movies = get_top_movies_by_revenue(limit=5)
         platforms = get_platform_breakdown()
+        mentions_trend = get_mentions_trend()
+        genre_breakdown = get_genre_breakdown()
         return {
             "top_movies": top_movies,
             "platform_breakdown": platforms,
+            "mentions_trend": mentions_trend,
+            "genre_breakdown": genre_breakdown,
         }
     except Exception as exc:
         logger.error("KPI snapshot error: %s", exc)

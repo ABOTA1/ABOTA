@@ -21,14 +21,14 @@ async def chat(request: ChatRequest) -> ChatResponse:
         return await handle_chat(request.question)
     except Exception as exc:
         logger.exception("Unhandled error in /api/chat: %s", exc)
-        return ChatResponse(
-            answer="The agent could not complete this request. Please try again.",
-            analytics=None,
-            error=str(exc),
-        )
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/kpis")
 async def kpis():
     """Return a pre-computed KPI snapshot."""
-    return get_kpi_snapshot()
+    try:
+        return get_kpi_snapshot()
+    except Exception as exc:
+        logger.exception("Unhandled error in /api/kpis: %s", exc)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

@@ -1,3 +1,8 @@
+import os
+
+os.environ.setdefault("GEMINI_API_KEY", "test-key")
+os.environ.setdefault("CLICKHOUSE_PASSWORD", "test")
+
 from fastapi.testclient import TestClient
 
 from app.main import app

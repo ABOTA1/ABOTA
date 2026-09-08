@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # ── Gemini ─────────────────────────────────────────────────────────────────
     gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
-    gemini_model: str = Field("gemini-2.0-flash", alias="GEMINI_MODEL")
+    gemini_model: str = Field("gemini-3.5-flash", alias="GEMINI_MODEL")
 
     # ── ClickHouse Cloud ───────────────────────────────────────────────────────
     clickhouse_host: str = Field("your-instance.clickhouse.cloud", alias="CLICKHOUSE_HOST")
@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     app_env: str = Field("development", alias="APP_ENV")
     log_level: str = Field("INFO", alias="LOG_LEVEL")
     cors_origins: List[str] = Field(
-        default=["http://localhost:3000"], alias="CORS_ORIGINS"
+        default=["http://localhost:3000", "http://127.0.0.1:3000"],
+        alias="CORS_ORIGINS",
     )
 
 

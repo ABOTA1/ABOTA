@@ -8,19 +8,34 @@ from typing import Any, Dict, List
 from app.db.clickhouse_client import execute_query
 
 
-# TODO: Replace these example queries with your real business metrics.
-
-
 def get_top_movies_by_revenue(limit: int = 10) -> List[Dict[str, Any]]:
-    """Return the top N movies ranked by total box-office revenue."""
+    """Return the top N movies ranked by total box-office revenue, with social mentions and catalog attrs."""
     sql = f"""
         SELECT
-            content_title AS movie_title,
-            SUM(daily_revenue) AS total_revenue
-        FROM box_office_metrics
-        GROUP BY content_title
+            b.content_title AS movie_title,
+            b.total_revenue AS total_revenue,
+            COALESCE(m.total_mentions, 0) AS total_mentions,
+            c.genre AS genre,
+            c.country AS country,
+            c.budget_usd AS budget_usd
+        FROM (
+            SELECT
+                content_title,
+                any(content_id) AS content_id,
+                SUM(daily_revenue) AS total_revenue
+            FROM box_office_metrics
+            GROUP BY content_title
+        ) AS b
+        LEFT JOIN (
+            SELECT
+                content_id,
+                count() AS total_mentions
+            FROM social_mentions
+            GROUP BY content_id
+        ) AS m ON b.content_id = m.content_id
+        LEFT JOIN content_catalog AS c ON b.content_id = c.content_id
         ORDER BY total_revenue DESC
-        LIMIT {limit}
+        LIMIT {int(limit)}
     """
     return execute_query(sql)
 
@@ -73,8 +88,36 @@ def get_platform_breakdown() -> List[Dict[str, Any]]:
     return execute_query(sql)
 
 
+def get_genre_breakdown() -> List[Dict[str, Any]]:
+    """Aggregate box-office revenue by genre via content_catalog."""
+    sql = """
+        SELECT
+            c.genre AS genre,
+            countDistinct(b.content_id) AS titles,
+            SUM(b.daily_revenue) AS total_revenue
+        FROM box_office_metrics AS b
+        INNER JOIN content_catalog AS c ON b.content_id = c.content_id
+        GROUP BY c.genre
+        ORDER BY total_revenue DESC
+    """
+    return execute_query(sql)
+
+
+def get_mentions_trend() -> List[Dict[str, Any]]:
+    """Weekly social-mention volume for the dashboard line chart."""
+    sql = """
+        SELECT
+            toString(toStartOfWeek(event_time)) AS label,
+            count() AS mentions
+        FROM social_mentions
+        GROUP BY toStartOfWeek(event_time)
+        ORDER BY toStartOfWeek(event_time) ASC
+    """
+    return execute_query(sql)
+
+
 def get_metrics_summary() -> Dict[str, Any]:
-    """Return the aggregate metrics used by the dashboard summary."""
+    """Return the aggregate metrics used by GET /api/metrics/summary."""
     sql = """
         SELECT
             (SELECT COALESCE(SUM(daily_revenue), 0) FROM box_office_metrics) AS total_revenue,

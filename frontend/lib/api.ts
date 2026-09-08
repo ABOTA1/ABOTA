@@ -1,25 +1,59 @@
 // lib/api.ts – Typed fetch client for the FastAPI backend.
 
-import type {
-  ChatResponse,
-  KpiSnapshot,
-  MetricsSummary,
-} from "@/types/analytics";
+import type { ChatResponse, KpiSnapshot, MetricsSummary } from "@/types/analytics";
+
+/**
+ * Browser calls stay same-origin (`/api/...`) by default.
+ * Next.js proxies those paths to FastAPI (see app/api/[...path]/route.ts).
+ *
+ * Direct `http://localhost:8000` is ignored: on Windows, Brave often resolves
+ * localhost to IPv6 (::1) while Docker/uvicorn only listen on IPv4, which
+ * surfaces as net::ERR_EMPTY_RESPONSE / TypeError: Failed to fetch.
+ */
+function resolveApiUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
+  if (!raw) {
+    return "";
+  }
+  try {
+    const url = new URL(raw);
+    const isLocalBackend =
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1") &&
+      (url.port === "8000" || url.port === "");
+    if (isLocalBackend) {
+      return "";
+    }
+  } catch {
+    return raw.replace(/\/$/, "");
+  }
+  return raw.replace(/\/$/, "");
+}
+
+const API_URL = resolveApiUrl();
+
+async function readError(res: Response): Promise<string> {
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text) as { error?: string; detail?: string };
+    return json.error || json.detail || text;
+  } catch {
+    return text;
+  }
+}
 
 /**
  * Send a natural-language question to the Gemini agent.
  * Returns a structured ChatResponse with an answer and optional analytics.
  */
 export async function askAgent(question: string): Promise<ChatResponse> {
-  const res = await fetch("/api/chat", {
+  const res = await fetch(`${API_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Agent API error ${res.status}: ${text}`);
+    throw new Error(`Agent API error ${res.status}: ${await readError(res)}`);
   }
 
   return res.json() as Promise<ChatResponse>;
@@ -30,14 +64,12 @@ export async function askAgent(question: string): Promise<ChatResponse> {
  * No agent call – fast direct ClickHouse query.
  */
 export async function fetchKpis(): Promise<KpiSnapshot> {
-  const res = await fetch("/api/kpis", {
-    // TODO: Add revalidation strategy when deploying (e.g. next: { revalidate: 60 })
+  const res = await fetch(`${API_URL}/api/kpis`, {
     cache: "no-store",
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`KPI API error ${res.status}: ${text}`);
+    throw new Error(`KPI API error ${res.status}: ${await readError(res)}`);
   }
 
   return res.json() as Promise<KpiSnapshot>;
@@ -48,13 +80,12 @@ export async function fetchKpis(): Promise<KpiSnapshot> {
  * No agent call – direct ClickHouse aggregation in the backend.
  */
 export async function fetchMetricsSummary(): Promise<MetricsSummary> {
-  const res = await fetch("/api/metrics/summary", {
+  const res = await fetch(`${API_URL}/api/metrics/summary`, {
     cache: "no-store",
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Metrics summary API error ${res.status}: ${text}`);
+    throw new Error(`Metrics summary API error ${res.status}: ${await readError(res)}`);
   }
 
   return res.json() as Promise<MetricsSummary>;

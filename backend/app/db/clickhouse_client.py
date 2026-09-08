@@ -7,6 +7,7 @@ import logging
 from functools import lru_cache
 from typing import Any, Dict, List
 
+import certifi
 import clickhouse_connect
 from clickhouse_connect.driver.client import Client
 
@@ -21,8 +22,7 @@ def get_clickhouse_client() -> Client:
     """Return a cached ClickHouse client (thread-safe singleton)."""
     # Limpiamos el host por si trae prefijos
     clean_host = (
-        settings.clickhouse_host
-        .replace("https://", "")
+        settings.clickhouse_host.replace("https://", "")
         .replace("http://", "")
         .split(":")[0]
         .rstrip("/")
@@ -40,8 +40,9 @@ def get_clickhouse_client() -> Client:
         password=settings.clickhouse_password,
         database=settings.clickhouse_database,
         secure=settings.clickhouse_secure,
-        connect_timeout=10,
-        send_receive_timeout=30,
+        connect_timeout=30,
+        send_receive_timeout=60,
+        ca_cert=certifi.where(),
     )
     return client
 
