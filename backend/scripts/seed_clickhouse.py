@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import certifi
 import clickhouse_connect
 from app.config import get_settings
+from app.db.clickhouse_host import sanitize_clickhouse_host
 
 # Deterministic demo data so re-seeds are comparable across machines.
 random.seed(42)
@@ -299,7 +300,7 @@ def generate_fact_rows(
 
 
 def _is_placeholder_host(host: str) -> bool:
-    cleaned = host.replace("https://", "").replace("http://", "").strip().lower()
+    cleaned = sanitize_clickhouse_host(host).lower()
     return (not cleaned) or cleaned.startswith("your-instance")
 
 
@@ -356,17 +357,20 @@ def main() -> None:
     settings = get_settings()
     _preflight(settings)
     force = "--force" in sys.argv
+    clean_host = sanitize_clickhouse_host(settings.clickhouse_host)
 
     print(
-        f"Connecting to ClickHouse Cloud at {settings.clickhouse_host}:"
-        f"{settings.clickhouse_port} (Secure={settings.clickhouse_secure})..."
+        f"Connecting to ClickHouse Cloud at {clean_host}:"
+        f"{settings.clickhouse_port} (Secure={settings.clickhouse_secure}, "
+        f"database={settings.clickhouse_database})..."
     )
     client = clickhouse_connect.get_client(
-        host=settings.clickhouse_host.replace("https://", "").replace("http://", "").split(":")[0],
+        host=clean_host,
         port=settings.clickhouse_port,
         username=settings.clickhouse_user,
         password=settings.clickhouse_password,
         secure=settings.clickhouse_secure,
+        verify=settings.clickhouse_verify if settings.clickhouse_secure else False,
         connect_timeout=30,
         send_receive_timeout=60,
         ca_cert=certifi.where() if settings.clickhouse_secure else None,
@@ -382,6 +386,10 @@ def main() -> None:
             "Re-run with --force to insert another batch."
         )
         print("✅ Seed script complete (schema + catalog ensured).")
+        print(
+            "The agent queries this Cloud database through mcp-clickhouse stdio "
+            f"(CLICKHOUSE_DATABASE={settings.clickhouse_database})."
+        )
         return
 
     box_office_rows, streaming_rows, social_rows = generate_fact_rows()
@@ -423,6 +431,10 @@ def main() -> None:
     )
 
     print("✅ Seed script completed successfully.")
+    print(
+        "The agent queries this Cloud database through mcp-clickhouse stdio "
+        f"(CLICKHOUSE_DATABASE={settings.clickhouse_database})."
+    )
 
 
 if __name__ == "__main__":

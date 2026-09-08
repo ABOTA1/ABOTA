@@ -13,6 +13,7 @@ import clickhouse_connect
 from clickhouse_connect.driver.client import Client
 
 from app.config import get_settings
+from app.db.clickhouse_host import sanitize_clickhouse_host
 from app.db.errors import ClickHouseQueryError, ClickHouseTimeoutError
 from app.db.sql_guard import validate_readonly_select
 
@@ -24,13 +25,7 @@ settings = get_settings()
 def get_clickhouse_client() -> Client:
     """Return a cached ClickHouse client (thread-safe singleton)."""
     timeout = settings.clickhouse_query_timeout
-    # Limpiamos el host por si trae prefijos
-    clean_host = (
-        settings.clickhouse_host.replace("https://", "")
-        .replace("http://", "")
-        .split(":")[0]
-        .rstrip("/")
-    )
+    clean_host = sanitize_clickhouse_host(settings.clickhouse_host)
 
     logger.info(
         "Connecting to ClickHouse Cloud at %s (Secure: %s, timeout: %ss)",
@@ -48,7 +43,7 @@ def get_clickhouse_client() -> Client:
         secure=settings.clickhouse_secure,
         connect_timeout=timeout,
         send_receive_timeout=timeout,
-        ca_cert=certifi.where(),
+        ca_cert=certifi.where() if settings.clickhouse_secure else None,
     )
     return client
 
