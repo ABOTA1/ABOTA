@@ -66,3 +66,11 @@ export interface KpiSnapshot {
   genre_breakdown?: GenreBreakdown[];
   error?: string;
 }
+
+// Aggregate metrics returned by GET /api/metrics/summary
+export interface MetricsSummary {
+  total_revenue: number;
+  total_titles: number;
+  total_mentions: number;
+  average_sentiment: number | null;
+}

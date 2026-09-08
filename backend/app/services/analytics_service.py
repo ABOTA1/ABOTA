@@ -7,10 +7,11 @@ from typing import Any, Dict
 
 from app.agent.gemini_client import run_agent
 from app.db.queries import (
-    get_top_movies_by_revenue,
-    get_platform_breakdown,
-    get_mentions_trend,
     get_genre_breakdown,
+    get_mentions_trend,
+    get_metrics_summary as query_metrics_summary,
+    get_platform_breakdown,
+    get_top_movies_by_revenue,
 )
 from app.models.schemas import AnalyticsResult, ChatResponse, ChartSeries, SeriesPoint
 
@@ -50,3 +51,8 @@ def get_kpi_snapshot() -> Dict[str, Any]:
     except Exception as exc:
         logger.error("KPI snapshot error: %s", exc)
         return {"error": str(exc)}
+
+
+def get_metrics_summary() -> Dict[str, Any]:
+    """Return aggregate dashboard metrics without going through the agent."""
+    return query_metrics_summary()

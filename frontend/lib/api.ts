@@ -1,6 +1,6 @@
 // lib/api.ts – Typed fetch client for the FastAPI backend.
 
-import type { ChatResponse, KpiSnapshot } from "@/types/analytics";
+import type { ChatResponse, KpiSnapshot, MetricsSummary } from "@/types/analytics";
 
 /**
  * Browser calls stay same-origin (`/api/...`) by default.
@@ -73,4 +73,20 @@ export async function fetchKpis(): Promise<KpiSnapshot> {
   }
 
   return res.json() as Promise<KpiSnapshot>;
+}
+
+/**
+ * Fetch aggregate metrics for the dashboard KPI cards.
+ * No agent call – direct ClickHouse aggregation in the backend.
+ */
+export async function fetchMetricsSummary(): Promise<MetricsSummary> {
+  const res = await fetch(`${API_URL}/api/metrics/summary`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`Metrics summary API error ${res.status}: ${await readError(res)}`);
+  }
+
+  return res.json() as Promise<MetricsSummary>;
 }
