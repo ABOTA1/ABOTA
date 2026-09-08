@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Clapperboard, MessageSquare, Sparkles } from "lucide-react";
+import { ArrowUpRight, Clapperboard, MessageSquare, Sparkles, BarChart3 } from "lucide-react";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { KpiCard } from "@/components/layout/KpiCard";
 import { PageFrame } from "@/components/layout/PageFrame";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,7 +10,7 @@ import { useKpis } from "@/hooks/useKpis";
 import { formatCompact, formatUSD } from "@/lib/utils";
 
 export default function OverviewPage() {
-  const { kpis, summary, loading, error } = useKpis();
+  const { kpis, summary, loading, summaryLoading, error, summaryError } = useKpis();
   const top = kpis?.top_movies?.[0];
   const sentiment =
     summary?.average_sentiment == null ? "—" : summary.average_sentiment.toFixed(2);
@@ -23,35 +24,48 @@ export default function OverviewPage() {
       />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="Total revenue"
-          loading={loading}
-          delayMs={40}
-          value={summary ? formatUSD(summary.total_revenue) : "—"}
-          sub="All box-office revenue"
-        />
-        <KpiCard
-          label="Titles tracked"
-          loading={loading}
-          delayMs={80}
-          value={summary ? formatCompact(summary.total_titles) : "—"}
-          sub="Unique content titles"
-        />
-        <KpiCard
-          label="Social mentions"
-          loading={loading}
-          delayMs={120}
-          accent
-          value={summary ? formatCompact(summary.total_mentions) : "—"}
-          sub="Across tracked platforms"
-        />
-        <KpiCard
-          label="Avg. sentiment"
-          loading={loading}
-          delayMs={160}
-          value={sentiment}
-          sub="−1.0 negative to +1.0 positive"
-        />
+        {summaryError && !summaryLoading ? (
+          <div className="sm:col-span-2 xl:col-span-4">
+            <EmptyState
+              icon={BarChart3}
+              title="Could not load house totals"
+              description={summaryError}
+              className="min-h-[8rem] rounded-2xl border border-destructive/30 bg-destructive/5"
+            />
+          </div>
+        ) : (
+          <>
+            <KpiCard
+              label="Total revenue"
+              loading={summaryLoading}
+              delayMs={40}
+              value={summary ? formatUSD(summary.total_revenue) : "—"}
+              sub="All box-office revenue"
+            />
+            <KpiCard
+              label="Titles tracked"
+              loading={summaryLoading}
+              delayMs={80}
+              value={summary ? formatCompact(summary.total_titles) : "—"}
+              sub="Unique content titles"
+            />
+            <KpiCard
+              label="Social mentions"
+              loading={summaryLoading}
+              delayMs={120}
+              accent
+              value={summary ? formatCompact(summary.total_mentions) : "—"}
+              sub="Across tracked platforms"
+            />
+            <KpiCard
+              label="Avg. sentiment"
+              loading={summaryLoading}
+              delayMs={160}
+              value={sentiment}
+              sub="−1.0 negative to +1.0 positive"
+            />
+          </>
+        )}
       </section>
 
       <div className="grid items-stretch gap-6 lg:grid-cols-5">
