@@ -13,8 +13,12 @@ to emit a destructive statement. `prompts.py` instructs the model to only
 emit SELECT statements, but a system prompt is not an enforcement
 mechanism — it's a request. `_validate_sql_query` below is the actual
 enforcement boundary: every tool-call argument that looks like SQL is
-checked before it ever reaches the `mcp-clickhouse` server, and anything
-that isn't a single, standalone SELECT statement is rejected.
+checked before it ever reaches the `mcp-clickhouse` server. Read-only
+SELECT and WITH ... SELECT CTEs are allowed; DDL/DML is rejected.
+
+Quota: `generate_content` walks `settings.gemini_model_chain()` and skips
+models that return 429 / RESOURCE_EXHAUSTED so a single exhausted free-tier
+id (e.g. gemini-3.5-flash) does not take down the agent.
 """
 import os
 import re
@@ -32,6 +36,8 @@ from mcp.client.stdio import stdio_client
 from app.config import get_settings
 from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.mcp_bridge import get_gemini_tools_from_mcp
+from app.db.errors import InvalidSQLError
+from app.db.sql_guard import validate_readonly_select
 from app.models.schemas import AnalyticsResult, ChartSeries, SeriesPoint
 
 logger = logging.getLogger(__name__)
@@ -59,14 +65,19 @@ _FORBIDDEN_TABLE_FUNCTIONS = (
     "file(", "url(", "s3(", "remote(", "remoteSecure(", "hdfs(", "mysql(", "postgresql(",
 )
 
-_LEADING_COMMENT_RE = re.compile(r"^(\s*--[^\n]*\n|\s*/\*.*?\*/\s*)+", re.DOTALL)
-_SELECT_PREFIX_RE = re.compile(r"^SELECT\b", re.IGNORECASE)
+_LEADING_COMMENT_RE = re.compile(r"^(\s*--[^\n]*(?:\n|$|\Z)|\s*/\*.*?\*/\s*)+", re.DOTALL)
+
+_QUOTA_EXHAUSTED_ANSWER = (
+    "All configured Gemini text models are at their current quota. "
+    "Wait for the daily reset, or set GEMINI_MODEL / GEMINI_MODELS to models "
+    "that still have generateContent budget."
+)
 
 
 def _validate_sql_query(query: Any) -> Optional[str]:
     """
     Validates that a candidate SQL string is a single, read-only SELECT
-    statement.
+    (WITH ... SELECT CTEs allowed).
 
     Returns:
         None if the query is safe to execute.
@@ -78,28 +89,12 @@ def _validate_sql_query(query: Any) -> Optional[str]:
     if not isinstance(query, str):
         return "Security check failed: SQL argument must be a string."
 
-    normalized = query.strip()
-    if not normalized:
-        return "Security check failed: empty SQL query is not allowed."
+    try:
+        validate_readonly_select(query)
+    except InvalidSQLError as exc:
+        return f"Security check failed: {exc}"
 
-    # Strip leading comments so "-- SELECT\nDROP TABLE x" can't sneak past
-    # the prefix check below.
-    stripped = _LEADING_COMMENT_RE.sub("", normalized).strip()
-
-    if not _SELECT_PREFIX_RE.match(stripped):
-        return (
-            "Security check failed: only SELECT statements are permitted. "
-            "The query must start with SELECT."
-        )
-
-    # Reject stacked/chained statements (e.g. "SELECT 1; DROP TABLE x").
-    # A single trailing semicolon is fine; anything after it is not.
-    body = stripped[:-1] if stripped.endswith(";") else stripped
-    if ";" in body:
-        return (
-            "Security check failed: multiple SQL statements are not permitted. "
-            "Only a single SELECT statement per call is allowed."
-        )
+    stripped = _LEADING_COMMENT_RE.sub("", query.strip()).strip()
 
     for keyword in _FORBIDDEN_KEYWORDS:
         if re.search(rf"\b{keyword}\b", stripped, re.IGNORECASE):
@@ -117,6 +112,56 @@ def _validate_sql_query(query: Any) -> Optional[str]:
             )
 
     return None
+
+
+def _is_quota_error(exc: BaseException) -> bool:
+    """True when Gemini (or the SDK) reports free-tier / RPM quota exhaustion."""
+    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    if code in (429, "429"):
+        return True
+    status = str(getattr(exc, "status", "") or "")
+    if status.upper() in {"RESOURCE_EXHAUSTED", "429"}:
+        return True
+    text = str(exc)
+    lowered = text.lower()
+    return (
+        "RESOURCE_EXHAUSTED" in text
+        or "exceeded your current quota" in lowered
+        or "quota exceeded" in lowered
+        or "GenerateRequestsPerDayPerProjectPerModel" in text
+    )
+
+
+def _generate_content_with_fallback(
+    client: genai.Client,
+    *,
+    contents: Any,
+    config: Any,
+):
+    """Call generate_content, walking GEMINI_MODEL then GEMINI_MODELS on 429."""
+    last_exc: Optional[BaseException] = None
+    chain = settings.gemini_model_chain()
+    for model in chain:
+        try:
+            logger.info("Gemini generate_content using model=%s", model)
+            return client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+        except Exception as exc:
+            last_exc = exc
+            if _is_quota_error(exc):
+                logger.warning(
+                    "Gemini quota/rate-limit on model=%s; trying next in chain. %s",
+                    model,
+                    exc,
+                )
+                continue
+            raise
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("No Gemini models configured in GEMINI_MODEL / GEMINI_MODELS.")
 
 
 def _extract_sql_arg(args: Dict[str, Any]) -> Optional[Any]:
@@ -297,15 +342,25 @@ async def run_agent(question: str) -> Dict[str, Any]:
                     types.Content(role="user", parts=[types.Part(text=question)])
                 ]
 
-                response = client.models.generate_content(
-                    model=settings.gemini_model,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_PROMPT,
-                        tools=[gemini_tools],
-                        temperature=0.1,
-                    ),
-                )
+                try:
+                    response = _generate_content_with_fallback(
+                        client,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                            tools=[gemini_tools],
+                            temperature=0.1,
+                        ),
+                    )
+                except Exception as gen_exc:
+                    if _is_quota_error(gen_exc):
+                        logger.exception("All Gemini models exhausted quota on first turn")
+                        return {
+                            "answer": _QUOTA_EXHAUSTED_ANSWER,
+                            "analytics": None,
+                            "error": str(gen_exc),
+                        }
+                    raise
 
                 if not response.candidates:
                     logger.warning("Gemini returned no candidates (possibly blocked by safety filters).")
@@ -375,8 +430,8 @@ async def run_agent(question: str) -> Dict[str, Any]:
                     )
 
                     try:
-                        final_response = client.models.generate_content(
-                            model=settings.gemini_model,
+                        final_response = _generate_content_with_fallback(
+                            client,
                             contents=contents,
                             config=types.GenerateContentConfig(
                                 system_instruction=SYSTEM_PROMPT,
@@ -388,8 +443,12 @@ async def run_agent(question: str) -> Dict[str, Any]:
                         )
                     except Exception as gen_exc:
                         logger.exception("Gemini follow-up after tool call failed")
-                        error = str(gen_exc)
                         answer = _fallback_answer_from_tool(tool_response_payload)
+                        if _is_quota_error(gen_exc):
+                            if error is None and tool_response_payload.get("error"):
+                                error = str(tool_response_payload["error"])
+                        else:
+                            error = str(gen_exc)
 
                 else:
                     answer = candidate_parts[0].text if candidate_parts and getattr(candidate_parts[0], "text", None) else ""

@@ -21,7 +21,7 @@ Unlike generic abstractions, the repository implementation follows this concrete
              │
    ┌─────────┴────────────────────────┐
    │ app/agent/gemini_client.py       │
-   │ - google-genai (gemini-3.5-flash)│
+   │ - google-genai (GEMINI_MODEL + GEMINI_MODELS fallback on 429)│
    │  - mcp ClientSession (stdio)     │
    └─────────┬────────────────────────┘
              │ stdio transport (Subprocess)
@@ -34,7 +34,7 @@ Unlike generic abstractions, the repository implementation follows this concrete
 
 ### Core Components:
 - **Backend Framework**: FastAPI (`backend/app/main.py`), running under Uvicorn with Pydantic v2 settings.
-- **AI Engine**: `google-genai` SDK (`gemini-3.5-flash` by default, configured in `app/config.py`).
+- **AI Engine**: `google-genai` SDK. Preferred model is `GEMINI_MODEL` (`gemini-3.8-flash` by default). On `429 RESOURCE_EXHAUSTED` the agent walks `GEMINI_MODELS` (other generateContent text models) so one exhausted free-tier id does not take down chat.
 - **MCP Bridge**: `app/agent/mcp_bridge.py` dynamically maps MCP tool definitions (JSON Schema) to `google.genai.types.FunctionDeclaration` objects.
 - **MCP Transport**: Local `stdio` subprocess spawned per request via `mcp.client.stdio.stdio_client` executing the `mcp-clickhouse` executable with ClickHouse environment variables passed at runtime.
 - **Direct Database Client**: `clickhouse-connect` is used exclusively for out-of-band tasks (seeding scripts in `scripts/seed_clickhouse.py` and pre-computed dashboard snapshot endpoints in `app/db/clickhouse_client.py`).
