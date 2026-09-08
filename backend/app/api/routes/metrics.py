@@ -1,8 +1,9 @@
 """Dashboard metrics endpoints."""
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from app.api.http_errors import dashboard_http_exception
 from app.services.analytics_service import get_metrics_summary
 
 router = APIRouter()
@@ -14,4 +15,4 @@ async def metrics_summary() -> Dict[str, Any]:
     try:
         return get_metrics_summary()
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise dashboard_http_exception(exc) from exc
