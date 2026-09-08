@@ -1,15 +1,17 @@
 // lib/api.ts – Typed fetch client for the FastAPI backend.
 
-import type { ChatResponse, KpiSnapshot } from "@/types/analytics";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import type {
+  ChatResponse,
+  KpiSnapshot,
+  MetricsSummary,
+} from "@/types/analytics";
 
 /**
  * Send a natural-language question to the Gemini agent.
  * Returns a structured ChatResponse with an answer and optional analytics.
  */
 export async function askAgent(question: string): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/api/chat`, {
+  const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
@@ -28,7 +30,7 @@ export async function askAgent(question: string): Promise<ChatResponse> {
  * No agent call – fast direct ClickHouse query.
  */
 export async function fetchKpis(): Promise<KpiSnapshot> {
-  const res = await fetch(`${API_URL}/api/kpis`, {
+  const res = await fetch("/api/kpis", {
     // TODO: Add revalidation strategy when deploying (e.g. next: { revalidate: 60 })
     cache: "no-store",
   });
@@ -39,4 +41,21 @@ export async function fetchKpis(): Promise<KpiSnapshot> {
   }
 
   return res.json() as Promise<KpiSnapshot>;
+}
+
+/**
+ * Fetch aggregate metrics for the dashboard KPI cards.
+ * No agent call – direct ClickHouse aggregation in the backend.
+ */
+export async function fetchMetricsSummary(): Promise<MetricsSummary> {
+  const res = await fetch("/api/metrics/summary", {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Metrics summary API error ${res.status}: ${text}`);
+  }
+
+  return res.json() as Promise<MetricsSummary>;
 }

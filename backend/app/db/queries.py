@@ -71,3 +71,34 @@ def get_platform_breakdown() -> List[Dict[str, Any]]:
         ORDER BY total_revenue DESC
     """
     return execute_query(sql)
+
+
+def get_metrics_summary() -> Dict[str, Any]:
+    """Return the aggregate metrics used by the dashboard summary."""
+    sql = """
+        SELECT
+            (SELECT COALESCE(SUM(daily_revenue), 0) FROM box_office_metrics) AS total_revenue,
+            (SELECT uniqExact(content_id) FROM box_office_metrics) AS total_titles,
+            (SELECT COUNT(*) FROM social_mentions) AS total_mentions,
+            (SELECT AVG(sentiment_score) FROM social_mentions) AS average_sentiment
+    """
+    rows = execute_query(sql)
+    if not rows:
+        return {
+            "total_revenue": 0.0,
+            "total_titles": 0,
+            "total_mentions": 0,
+            "average_sentiment": None,
+        }
+
+    summary = rows[0]
+    return {
+        "total_revenue": float(summary.get("total_revenue") or 0),
+        "total_titles": int(summary.get("total_titles") or 0),
+        "total_mentions": int(summary.get("total_mentions") or 0),
+        "average_sentiment": (
+            float(summary["average_sentiment"])
+            if summary.get("average_sentiment") is not None
+            else None
+        ),
+    }

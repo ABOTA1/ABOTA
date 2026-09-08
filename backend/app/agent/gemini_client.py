@@ -59,13 +59,13 @@ _FORBIDDEN_TABLE_FUNCTIONS = (
 )
 
 _LEADING_COMMENT_RE = re.compile(r"^(\s*--[^\n]*\n|\s*/\*.*?\*/\s*)+", re.DOTALL)
-_SELECT_PREFIX_RE = re.compile(r"^SELECT\b", re.IGNORECASE)
+_SELECT_PREFIX_RE = re.compile(r"^(?:SELECT|WITH)\b", re.IGNORECASE)
 
 
 def _validate_sql_query(query: Any) -> Optional[str]:
     """
     Validates that a candidate SQL string is a single, read-only SELECT
-    statement.
+    statement, optionally preceded by CTEs.
 
     Returns:
         None if the query is safe to execute.
@@ -87,8 +87,8 @@ def _validate_sql_query(query: Any) -> Optional[str]:
 
     if not _SELECT_PREFIX_RE.match(stripped):
         return (
-            "Security check failed: only SELECT statements are permitted. "
-            "The query must start with SELECT."
+            "Security check failed: only read-only SELECT statements are permitted. "
+            "The query must start with SELECT or WITH."
         )
 
     # Reject stacked/chained statements (e.g. "SELECT 1; DROP TABLE x").

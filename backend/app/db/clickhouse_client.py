@@ -20,7 +20,13 @@ settings = get_settings()
 def get_clickhouse_client() -> Client:
     """Return a cached ClickHouse client (thread-safe singleton)."""
     # Limpiamos el host por si trae prefijos
-    clean_host = settings.clickhouse_host.replace("https://", "").replace("http://", "").split(":")[0]
+    clean_host = (
+        settings.clickhouse_host
+        .replace("https://", "")
+        .replace("http://", "")
+        .split(":")[0]
+        .rstrip("/")
+    )
 
     logger.info(
         "Connecting to ClickHouse Cloud at %s (Secure: %s)", 
