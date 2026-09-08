@@ -7,6 +7,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
+from app.api.http_errors import dashboard_http_exception
 from app.models.schemas import ChatRequest, ChatResponse
 from app.services.analytics_service import handle_chat, get_kpi_snapshot
 
@@ -31,4 +32,4 @@ async def kpis():
         return get_kpi_snapshot()
     except Exception as exc:
         logger.exception("Unhandled error in /api/kpis: %s", exc)
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise dashboard_http_exception(exc) from exc
