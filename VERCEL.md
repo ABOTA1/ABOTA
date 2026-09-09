@@ -32,6 +32,8 @@ NEXT_PUBLIC_API_URL=https://acceptable-laughter-production-4884.up.railway.app
 
 Leave `BACKEND_INTERNAL_URL` unset. The browser talks to Railway directly, so the Agent is not limited by Vercel’s 10s Hobby function timeout.
 
+If KPIs show `127.0.0.1:8000`, the env var was missing at **build** time. Add it under Settings → Environment Variables, then **Redeploy**.
+
 6. Deploy. The site URL is `https://<project>.vercel.app`.
 
 ## 3. Check

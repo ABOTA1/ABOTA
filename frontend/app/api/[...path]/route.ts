@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_ORIGIN =
-  process.env.BACKEND_INTERNAL_URL?.replace(/\/$/, "") || "http://127.0.0.1:8000";
+function backendOrigin(): string | null {
+  const raw = (
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    ""
+  ).trim();
+  if (raw) {
+    return raw.replace(/\/$/, "");
+  }
+  // Local docker/dev default. Never use this on Vercel — 127.0.0.1 is the
+  // serverless isolate, not FastAPI.
+  if (process.env.VERCEL) {
+    return null;
+  }
+  return "http://127.0.0.1:8000";
+}
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -12,8 +26,20 @@ async function proxy(
   request: NextRequest,
   context: { params: { path: string[] } }
 ): Promise<Response> {
+  const origin = backendOrigin();
+  if (!origin) {
+    return NextResponse.json(
+      {
+        error:
+          "Set NEXT_PUBLIC_API_URL (and/or BACKEND_INTERNAL_URL) on Vercel to the " +
+          "public Railway API, e.g. https://acceptable-laughter-production-4884.up.railway.app",
+      },
+      { status: 503 }
+    );
+  }
+
   const path = context.params.path.join("/");
-  const target = `${BACKEND_ORIGIN}/api/${path}${request.nextUrl.search}`;
+  const target = `${origin}/api/${path}${request.nextUrl.search}`;
 
   const headers = new Headers();
   const contentType = request.headers.get("content-type");
@@ -50,8 +76,8 @@ async function proxy(
     return NextResponse.json(
       {
         error:
-          `Backend is not reachable at ${BACKEND_ORIGIN}. ` +
-          "Start FastAPI with `docker compose up` (or uvicorn on port 8000) and retry. " +
+          `Backend is not reachable at ${origin}. ` +
+          "On Vercel set NEXT_PUBLIC_API_URL to the public Railway API HTTPS URL. " +
           `Details: ${detail}`,
       },
       { status: 502 }
