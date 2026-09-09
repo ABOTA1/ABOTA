@@ -42,6 +42,17 @@ app.include_router(metrics_router, prefix="/api", tags=["metrics"])
 app.include_router(metrics_router, tags=["metrics"])
 
 
+@app.get("/")
+async def root() -> dict[str, str]:
+    """Railway's edge probe hits `/`; this is the API, not the Next.js dashboard."""
+    return {
+        "service": "ABOTA API",
+        "health": "/api/health",
+        "docs": "/docs",
+        "hint": "The dashboard is the frontend Railway service (Next.js), not this URL.",
+    }
+
+
 @app.on_event("startup")
 async def startup_event() -> None:
     logger.info("🚀 ABOTA backend starting – env=%s", settings.app_env)
