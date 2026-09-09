@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { askAgent } from "@/lib/api";
 import type { AnalyticsResult, ChatResponse } from "@/types/analytics";
+import { AgentMarkdown } from "@/components/chat/AgentMarkdown";
 
 interface Message {
   role: "user" | "agent";
@@ -113,21 +114,14 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
           >
             {msg.role === "agent" && <Bot className="mt-1 h-4 w-4 shrink-0 text-primary" />}
             <div
-              className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm shadow-sm ${
+              className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${
                 msg.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/80 text-foreground backdrop-blur-sm"
+                  ? "max-w-[80%] whitespace-pre-wrap bg-primary text-primary-foreground"
+                  : "w-full max-w-[95%] bg-muted/80 text-foreground backdrop-blur-sm"
               }`}
             >
-              {msg.text}
-              {msg.analytics?.insights?.length ? (
-                <ul className="mt-2 space-y-1 text-xs opacity-80">
-                  {msg.analytics.insights.map((ins, j) => (
-                    <li key={j}>• {ins}</li>
-                  ))}
-                </ul>
-              ) : null}
-              {msg.error && <p className="mt-1 text-xs text-red-400">⚠ {msg.error}</p>}
+              {msg.role === "agent" ? <AgentMarkdown content={msg.text} /> : msg.text}
+              {msg.error && <p className="mt-2 text-xs text-red-400">⚠ {msg.error}</p>}
             </div>
             {msg.role === "user" && <User className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />}
           </div>

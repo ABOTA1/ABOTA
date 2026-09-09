@@ -28,3 +28,5 @@ def test_system_prompt_documents_catalog_join():
     assert "country" in PROMPT
     assert "run_select_query" in PROMPT
     assert "query_clickhouse" not in PROMPT
+    assert "### Key Takeaways" in PROMPT
+    assert "```json" in PROMPT
