@@ -114,11 +114,12 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
           >
             {msg.role === "agent" && <Bot className="mt-1 h-4 w-4 shrink-0 text-primary" />}
             <div
-              className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${
+              className={cn(
+                "rounded-2xl text-sm shadow-sm",
                 msg.role === "user"
-                  ? "max-w-[80%] whitespace-pre-wrap bg-primary text-primary-foreground"
-                  : "w-full max-w-[95%] bg-muted/80 text-foreground backdrop-blur-sm"
-              }`}
+                  ? "max-w-[80%] whitespace-pre-wrap bg-primary px-3 py-2 text-primary-foreground"
+                  : "w-full max-w-none bg-card/90 px-4 py-3 text-foreground ring-1 ring-border/60 backdrop-blur-sm",
+              )}
             >
               {msg.role === "agent" ? <AgentMarkdown content={msg.text} /> : msg.text}
               {msg.error && <p className="mt-2 text-xs text-red-400">⚠ {msg.error}</p>}

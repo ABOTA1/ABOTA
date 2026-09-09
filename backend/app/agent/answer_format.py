@@ -37,7 +37,7 @@ def ensure_natural_language_answer(
     analytics: Optional[AnalyticsResult],
     tool_error: Optional[str] = None,
 ) -> str:
-    """Prefer a Gemini briefing; otherwise build one from query rows."""
+    """Always emit the report layout; keep Gemini's opening prose when it is usable."""
     if tool_error:
         return f"The database query could not be completed: {tool_error}"
 
@@ -46,16 +46,19 @@ def ensure_natural_language_answer(
     if not rows:
         return text or "No rows were returned for that question."
 
-    if _looks_like_briefing(text):
-        return _inject_json_if_missing(text, question, analytics, rows)
-
-    return format_briefing(question, analytics, rows)
+    return format_briefing(
+        question,
+        analytics,
+        rows,
+        summary=_extract_gemini_summary(text),
+    )
 
 
 def format_briefing(
     question: str,
     analytics: Optional[AnalyticsResult],
     rows: Optional[Sequence[Mapping[str, Any]]] = None,
+    summary: Optional[str] = None,
 ) -> str:
     data_rows = list(rows if rows is not None else _rows_from_analytics(analytics))
     if not data_rows:
@@ -76,21 +79,22 @@ def format_briefing(
         "data": cleaned,
     }
 
-    summary = _summary_paragraph(title, label_col, metric_cols, data_rows)
+    lead = (summary or "").strip() or _summary_paragraph(title, label_col, metric_cols, data_rows)
     table = _markdown_table(label_col, metric_cols, data_rows)
     takeaways = _takeaways(label_col, metric_cols, data_rows)
-
     json_block = json.dumps(payload, indent=2, default=str, ensure_ascii=False)
     return (
         f"### {title}\n\n"
-        f"{summary}\n\n"
+        f"{lead}\n\n"
         "---\n\n"
-        "### Trend Data\n\n"
-        f"```json\n{json_block}\n```\n\n"
+        "### Breakdown\n\n"
         f"{table}\n\n"
         "---\n\n"
         "### Key Takeaways\n"
-        f"{takeaways}"
+        f"{takeaways}\n\n"
+        "---\n\n"
+        "### Trend Data\n\n"
+        f"```json\n{json_block}\n```"
     )
 
 
@@ -137,35 +141,35 @@ def _rows_from_mcp_text(text: str) -> List[Dict[str, Any]]:
     return []
 
 
-def _looks_like_briefing(text: str) -> bool:
-    if not text:
-        return False
-    lowered = text.lower().lstrip()
+def _extract_gemini_summary(text: str) -> Optional[str]:
+    """Keep Gemini's executive paragraph; drop tables, JSON, and leftover headings."""
+    raw = (text or "").strip()
+    if not raw:
+        return None
+    lowered = raw.lower()
     if any(lowered.startswith(prefix) for prefix in _RAW_DUMP_PREFIXES):
-        return False
+        return None
     if lowered.startswith("{") and '"columns"' in lowered:
-        return False
-    return "### " in text and "|" in text
-
-
-def _inject_json_if_missing(
-    text: str,
-    question: str,
-    analytics: Optional[AnalyticsResult],
-    rows: Sequence[Mapping[str, Any]],
-) -> str:
-    if "```json" in text:
-        return text
-    generated = format_briefing(question, analytics, rows)
-    match = re.search(r"```json\n.*?\n```", generated, flags=re.DOTALL)
-    if not match:
-        return text
-    json_section = "### Trend Data\n\n" + match.group(0) + "\n\n"
-    if "### Trend Data" in text:
-        return text
-    if "\n---\n" in text:
-        return text.replace("\n---\n", "\n---\n\n" + json_section, 1)
-    return text.rstrip() + "\n\n---\n\n" + json_section
+        return None
+    stripped = re.sub(r"```[\s\S]*?```", "", raw)
+    stripped = re.sub(r"(?im)^### Key Takeaways\s*$[\s\S]*", "", stripped)
+    lines: List[str] = []
+    for line in stripped.splitlines():
+        trimmed = line.strip()
+        if not trimmed or trimmed == "---":
+            continue
+        if trimmed.startswith("#"):
+            continue
+        if trimmed.startswith("|") or re.match(r"^\|?[\s:-]+\|", trimmed):
+            continue
+        if trimmed.startswith("*(") or trimmed.startswith("("):
+            continue
+        lines.append(trimmed)
+    prose = " ".join(lines).strip()
+    prose = re.sub(r"\s+", " ", prose)
+    if len(prose) < 40:
+        return None
+    return prose
 
 
 def _title_from_question(question: str, analytics: Optional[AnalyticsResult]) -> str:
@@ -233,9 +237,9 @@ def _json_safe_value(key: str, value: Any) -> Any:
         lowered = key.lower()
         if any(token in lowered for token in _SENTIMENT_KEYS):
             return round(value, 3)
-        if any(token in lowered for token in _MONEY_KEYS):
-            return round(value, 2)
         if any(token in lowered for token in _PCT_KEYS + _RATIO_KEYS):
+            return round(value, 2)
+        if any(token in lowered for token in _MONEY_KEYS):
             return round(value, 2)
         return round(value, 4) if abs(value) < 1 else round(value, 2)
     return value
@@ -243,6 +247,37 @@ def _json_safe_value(key: str, value: Any) -> Any:
 
 def _human_col(name: str) -> str:
     return re.sub(r"[_\s]+", " ", str(name)).strip().title()
+
+
+def _primary_metric(metric_cols: Sequence[str]) -> Optional[str]:
+    for col in metric_cols:
+        lowered = col.lower()
+        if any(token in lowered for token in ("ratio", "roi")):
+            return col
+    for col in metric_cols:
+        lowered = col.lower()
+        if any(token in lowered for token in _MONEY_KEYS) and "budget" not in lowered:
+            return col
+    for col in metric_cols:
+        lowered = col.lower()
+        if any(token in lowered for token in ("mention", "count", "volume")):
+            return col
+    for col in metric_cols:
+        if any(token in col.lower() for token in _SENTIMENT_KEYS):
+            return col
+    return metric_cols[0] if metric_cols else None
+
+
+def _format_money(number: float) -> str:
+    sign = "-" if number < 0 else ""
+    magnitude = abs(number)
+    if magnitude >= 1_000_000_000:
+        return f"{sign}${magnitude / 1_000_000_000:.1f}B"
+    if magnitude >= 1_000_000:
+        return f"{sign}${magnitude / 1_000_000:.1f}M"
+    if magnitude >= 10_000:
+        return f"{sign}${magnitude / 1_000:.0f}K"
+    return f"{sign}${magnitude:,.0f}"
 
 
 def _format_cell(key: str, value: Any) -> str:
@@ -255,12 +290,12 @@ def _format_cell(key: str, value: Any) -> str:
         number = float(value)
         if any(token in lowered for token in _SENTIMENT_KEYS):
             return f"{number:+.3f}"
-        if any(token in lowered for token in _MONEY_KEYS):
-            return f"${number:,.0f}"
         if any(token in lowered for token in _PCT_KEYS):
             return f"{number:,.1f}%"
         if any(token in lowered for token in _RATIO_KEYS):
             return f"{number:.2f}x"
+        if any(token in lowered for token in _MONEY_KEYS):
+            return _format_money(number)
         if number.is_integer():
             return f"{int(number):,}"
         return f"{number:,.2f}"
@@ -288,7 +323,7 @@ def _summary_paragraph(
     rows: Sequence[Mapping[str, Any]],
 ) -> str:
     n = len(rows)
-    primary = metric_cols[0] if metric_cols else label_col
+    primary = _primary_metric(metric_cols) or (metric_cols[0] if metric_cols else label_col)
     pairs = _numeric_pairs(label_col, primary, rows)
     pretty_metric = _human_col(primary)
     if not pairs:
@@ -318,7 +353,7 @@ def _markdown_table(
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(align) + " |",
     ]
-    peak_metric = metric_cols[0] if metric_cols else None
+    peak_metric = _primary_metric(metric_cols)
     peak_pairs = _numeric_pairs(label_col, peak_metric, rows) if peak_metric else []
     peak_label = max(peak_pairs, key=lambda item: item[1])[0] if peak_pairs else None
     for row in rows:
@@ -339,7 +374,14 @@ def _takeaways(
     rows: Sequence[Mapping[str, Any]],
 ) -> str:
     items: List[str] = []
-    for metric in metric_cols[:3]:
+    ordered = []
+    primary = _primary_metric(metric_cols)
+    if primary:
+        ordered.append(primary)
+    for col in metric_cols:
+        if col not in ordered:
+            ordered.append(col)
+    for metric in ordered[:3]:
         pairs = _numeric_pairs(label_col, metric, rows)
         if not pairs:
             continue

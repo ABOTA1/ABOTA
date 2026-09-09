@@ -22,7 +22,7 @@ export default function AgentPage() {
         description="Chat on one side, the chart it produces on the other. Nothing else crowding the frame."
       />
 
-      <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-2">
+      <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <ChartCard
           className="min-h-[22rem] xl:min-h-0"
           title={agentAnalytics?.title || "Result chart"}
