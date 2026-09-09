@@ -65,13 +65,66 @@ def test_generate_content_skips_quota_exhausted_model(monkeypatch):
             return SimpleNamespace(ok=True, model=model)
 
     client = SimpleNamespace(models=Models())
-    result = gc._generate_content_with_fallback(
+    result, used = gc._generate_content_with_fallback(
         client,
         contents=[],
         config=None,
     )
     assert calls == ["gemini-3.5-flash", "gemini-3.8-flash"]
     assert result.model == "gemini-3.8-flash"
+    assert used == "gemini-3.8-flash"
+
+
+def test_generate_content_skips_unavailable_model(monkeypatch):
+    from app.agent import gemini_client as gc
+
+    class ChainSettings:
+        def gemini_model_chain(self):
+            return ["gemini-3.8-flash", "gemini-3.7-flash"]
+
+    monkeypatch.setattr(gc, "settings", ChainSettings())
+    calls: list[str] = []
+
+    class Models:
+        def generate_content(self, model, contents, config):
+            calls.append(model)
+            if model == "gemini-3.8-flash":
+                raise RuntimeError(
+                    "503 UNAVAILABLE. This model is currently experiencing high demand."
+                )
+            return SimpleNamespace(ok=True, model=model)
+
+    client = SimpleNamespace(models=Models())
+    result, used = gc._generate_content_with_fallback(client, contents=[], config=None)
+    assert calls == ["gemini-3.8-flash", "gemini-3.7-flash"]
+    assert used == "gemini-3.7-flash"
+    assert result.model == "gemini-3.7-flash"
+
+
+def test_generate_content_prefers_last_successful_model(monkeypatch):
+    from app.agent import gemini_client as gc
+
+    class ChainSettings:
+        def gemini_model_chain(self):
+            return ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.7-flash"]
+
+    monkeypatch.setattr(gc, "settings", ChainSettings())
+    calls: list[str] = []
+
+    class Models:
+        def generate_content(self, model, contents, config):
+            calls.append(model)
+            return SimpleNamespace(ok=True, model=model)
+
+    client = SimpleNamespace(models=Models())
+    _, used = gc._generate_content_with_fallback(
+        client,
+        contents=[],
+        config=None,
+        prefer_model="gemini-3.8-flash",
+    )
+    assert calls == ["gemini-3.8-flash"]
+    assert used == "gemini-3.8-flash"
 
 
 def test_generate_content_reraises_non_quota_errors(monkeypatch):

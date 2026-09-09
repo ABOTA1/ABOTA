@@ -132,28 +132,58 @@ def _is_quota_error(exc: BaseException) -> bool:
     )
 
 
+def _is_retryable_model_error(exc: BaseException) -> bool:
+    """Quota plus transient capacity errors that another model ID may survive."""
+    if _is_quota_error(exc):
+        return True
+    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    if code in (503, 500, "503", "500"):
+        return True
+    status = str(getattr(exc, "status", "") or "").upper()
+    if status in {"UNAVAILABLE", "INTERNAL", "ABORTED", "DEADLINE_EXCEEDED"}:
+        return True
+    text = str(exc)
+    lowered = text.lower()
+    return (
+        "UNAVAILABLE" in text
+        or "high demand" in lowered
+        or "currently experiencing high demand" in lowered
+        or "try again later" in lowered
+    )
+
+
+def _ordered_model_chain(prefer_model: Optional[str] = None) -> List[str]:
+    chain = settings.gemini_model_chain()
+    if not prefer_model:
+        return chain
+    rest = [name for name in chain if name.lower() != prefer_model.lower()]
+    return [prefer_model, *rest]
+
+
 def _generate_content_with_fallback(
     client: genai.Client,
     *,
     contents: Any,
     config: Any,
+    prefer_model: Optional[str] = None,
 ):
-    """Call generate_content, walking GEMINI_MODEL then GEMINI_MODELS on 429."""
+    """Call generate_content, walking the model chain on 429/503. Returns (response, model)."""
     last_exc: Optional[BaseException] = None
-    chain = settings.gemini_model_chain()
+    chain = _ordered_model_chain(prefer_model)
     for model in chain:
         try:
             logger.info("Gemini generate_content using model=%s", model)
-            return client.models.generate_content(
+            response = client.models.generate_content(
                 model=model,
                 contents=contents,
                 config=config,
             )
+            return response, model
         except Exception as exc:
             last_exc = exc
-            if _is_quota_error(exc):
+            if _is_retryable_model_error(exc):
                 logger.warning(
-                    "Gemini quota/rate-limit on model=%s; trying next in chain. %s",
+                    "Gemini retryable error on model=%s; trying next in chain. %s",
                     model,
                     exc,
                 )
@@ -342,8 +372,9 @@ async def run_agent(question: str) -> Dict[str, Any]:
                     types.Content(role="user", parts=[types.Part(text=question)])
                 ]
 
+                used_model: Optional[str] = None
                 try:
-                    response = _generate_content_with_fallback(
+                    response, used_model = _generate_content_with_fallback(
                         client,
                         contents=contents,
                         config=types.GenerateContentConfig(
@@ -353,10 +384,18 @@ async def run_agent(question: str) -> Dict[str, Any]:
                         ),
                     )
                 except Exception as gen_exc:
-                    if _is_quota_error(gen_exc):
-                        logger.exception("All Gemini models exhausted quota on first turn")
+                    if _is_retryable_model_error(gen_exc):
+                        logger.exception("All Gemini models failed on first turn")
+                        answer = (
+                            _QUOTA_EXHAUSTED_ANSWER
+                            if _is_quota_error(gen_exc)
+                            else (
+                                "All configured Gemini text models are busy or unavailable. "
+                                "Please try again in a moment."
+                            )
+                        )
                         return {
-                            "answer": _QUOTA_EXHAUSTED_ANSWER,
+                            "answer": answer,
                             "analytics": None,
                             "error": str(gen_exc),
                         }
@@ -430,13 +469,14 @@ async def run_agent(question: str) -> Dict[str, Any]:
                     )
 
                     try:
-                        final_response = _generate_content_with_fallback(
+                        final_response, used_model = _generate_content_with_fallback(
                             client,
                             contents=contents,
                             config=types.GenerateContentConfig(
                                 system_instruction=SYSTEM_PROMPT,
                                 temperature=0.2,
                             ),
+                            prefer_model=used_model,
                         )
                         answer = _response_text(final_response) or _fallback_answer_from_tool(
                             tool_response_payload
@@ -444,7 +484,7 @@ async def run_agent(question: str) -> Dict[str, Any]:
                     except Exception as gen_exc:
                         logger.exception("Gemini follow-up after tool call failed")
                         answer = _fallback_answer_from_tool(tool_response_payload)
-                        if _is_quota_error(gen_exc):
+                        if _is_retryable_model_error(gen_exc):
                             if error is None and tool_response_payload.get("error"):
                                 error = str(tool_response_payload["error"])
                         else:
