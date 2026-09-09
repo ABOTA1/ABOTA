@@ -36,6 +36,7 @@ from mcp.client.stdio import stdio_client
 from app.config import get_settings
 from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.mcp_bridge import get_gemini_tools_from_mcp
+from app.agent.answer_format import ensure_natural_language_answer, polish_analytics
 from app.db.clickhouse_host import sanitize_clickhouse_host
 from app.db.errors import InvalidSQLError
 from app.db.sql_guard import validate_readonly_select
@@ -481,11 +482,17 @@ async def run_agent(question: str) -> Dict[str, Any]:
                             prefer_model=used_model,
                         )
                         answer = _response_text(final_response) or _fallback_answer_from_tool(
-                            tool_response_payload
+                            tool_response_payload,
+                            question=question,
+                            analytics=analytics,
                         )
                     except Exception as gen_exc:
                         logger.exception("Gemini follow-up after tool call failed")
-                        answer = _fallback_answer_from_tool(tool_response_payload)
+                        answer = _fallback_answer_from_tool(
+                            tool_response_payload,
+                            question=question,
+                            analytics=analytics,
+                        )
                         if _is_retryable_model_error(gen_exc):
                             if error is None and tool_response_payload.get("error"):
                                 error = str(tool_response_payload["error"])
@@ -501,7 +508,18 @@ async def run_agent(question: str) -> Dict[str, Any]:
         error = str(exc)
 
     if analytics and analytics.raw_rows:
-        analytics.insights = _generate_insights(analytics)
+        if analytics.title == "Query blocked":
+            analytics.insights = []
+        else:
+            polish_analytics(analytics, question)
+            analytics.insights = _generate_insights(analytics)
+            answer = ensure_natural_language_answer(
+                answer,
+                question=question,
+                analytics=analytics,
+            )
+            if error and _is_retryable_model_error(RuntimeError(str(error))):
+                error = None
 
     return {"answer": answer, "analytics": analytics, "error": error}
 
@@ -521,17 +539,19 @@ def _response_text(response: Any) -> str:
     return "\n".join(texts).strip()
 
 
-def _fallback_answer_from_tool(payload: Dict[str, Any]) -> str:
-    """Keep a usable answer if Gemini rejects the function-response follow-up."""
-    if payload.get("error"):
-        return f"The database query could not be completed: {payload['error']}"
-    result = payload.get("result")
-    if isinstance(result, str) and result.strip():
-        snippet = result.strip()
-        if len(snippet) > 1200:
-            snippet = snippet[:1200] + "…"
-        return "Query completed. Here is the raw result:\n" + snippet
-    return "Query completed, but I could not generate a summary."
+def _fallback_answer_from_tool(
+    payload: Dict[str, Any],
+    *,
+    question: str = "",
+    analytics: Optional[AnalyticsResult] = None,
+) -> str:
+    """Natural-language briefing if Gemini rejects the function-response follow-up."""
+    return ensure_natural_language_answer(
+        None,
+        question=question,
+        analytics=analytics,
+        tool_error=str(payload["error"]) if payload.get("error") else None,
+    )
 
 
 def _generate_insights(analytics: AnalyticsResult) -> List[str]:
