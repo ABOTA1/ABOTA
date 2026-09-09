@@ -11,6 +11,7 @@ import type { ChatResponse, KpiSnapshot, MetricsSummary } from "@/types/analytic
  * surfaces as net::ERR_EMPTY_RESPONSE / TypeError: Failed to fetch.
  */
 function resolveApiUrl(): string {
+  // @ts-ignore
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
   if (!raw) {
     return "";
@@ -45,11 +46,12 @@ async function readError(res: Response): Promise<string> {
  * Send a natural-language question to the Gemini agent.
  * Returns a structured ChatResponse with an answer and optional analytics.
  */
-export async function askAgent(question: string): Promise<ChatResponse> {
+export async function askAgent(question: string, signal?: AbortSignal): Promise<ChatResponse> {
   const res = await fetch(`${API_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
+    signal,
   });
 
   if (!res.ok) {
