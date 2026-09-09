@@ -1,0 +1,14 @@
+# Applied when Railway deploys the GitHub repo with Root Directory = / .
+# That is the failed "ABOTA" service: force Docker (not Railpack) and build the API.
+# Frontend service must set Config File to /frontend/railway.toml so it does not
+# inherit this file.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

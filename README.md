@@ -95,7 +95,7 @@ Stop with `Ctrl+C`, or `docker compose down`.
 
 ## Deploy on Railway
 
-Public URL for the dashboard: two Docker services (`backend` + `frontend`) in one Railway project. ClickHouse Cloud and Gemini stay external.
+If Railway shows **Railpack could not determine how to build the app**, the service is scanning the repo root. Follow **[RAILWAY.md](./RAILWAY.md)** section 0 (two services, Docker, no `start.sh`).
 
 Step-by-step (service names, env vars, private networking): **[RAILWAY.md](./RAILWAY.md)**.
 
