@@ -93,6 +93,14 @@ Stop with `Ctrl+C`, or `docker compose down`.
 
 ---
 
+## Deploy on Railway
+
+Public URL for the dashboard: two Docker services (`backend` + `frontend`) in one Railway project. ClickHouse Cloud and Gemini stay external.
+
+Step-by-step (service names, env vars, private networking): **[RAILWAY.md](./RAILWAY.md)**.
+
+---
+
 ## Optional: local venv (only if you cannot use Docker)
 
 Same packages as Docker, pinned in `backend/requirements.txt`:

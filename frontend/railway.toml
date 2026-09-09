@@ -1,0 +1,13 @@
+# Railway service: set Root Directory to `frontend`.
+# Name this service `frontend`. Generate a public domain on this service only
+# (the browser should not call FastAPI directly).
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.prod"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

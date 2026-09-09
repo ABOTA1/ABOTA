@@ -1,0 +1,13 @@
+# Railway service: set Root Directory to `backend`.
+# Name this service `backend` so the frontend can reference
+# ${{backend.RAILWAY_PRIVATE_DOMAIN}}.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

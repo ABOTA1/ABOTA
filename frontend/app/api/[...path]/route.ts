@@ -5,6 +5,8 @@ const BACKEND_ORIGIN =
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// Gemini + mcp-clickhouse can exceed Vercel/Railway's default 10–60s budget.
+export const maxDuration = 300;
 
 async function proxy(
   request: NextRequest,
