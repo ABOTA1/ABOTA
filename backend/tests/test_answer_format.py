@@ -38,9 +38,10 @@ def test_briefing_has_summary_json_table_and_takeaways():
     assert text.startswith("### Weekly social mentions trend")
     assert "```json" in text
     assert '"chart_type": "line"' in text
+    assert "### Breakdown" in text
     assert "| Week Start |" in text or "| Week Start" in text
     assert "### Key Takeaways" in text
-    assert "858" in text
+    assert text.index("### Breakdown") < text.index("### Trend Data")
     assert "Query completed. Here is the raw result" not in text
 
 
@@ -56,23 +57,58 @@ def test_raw_mcp_dump_is_replaced_with_briefing():
     assert "Query completed. Here is the raw result" not in text
 
 
-def test_gemini_briefing_is_kept_and_json_injected_if_missing():
+def test_gemini_prose_is_kept_and_server_adds_table_json_takeaways():
     gemini = (
-        "### Weekly Social Mentions Trend\n\n"
-        "Volume stayed steady.\n\n"
-        "---\n\n"
-        "| Week | Mentions |\n| --- | --- |\n| 2024-03-24 | 858 |\n\n"
-        "---\n\n"
-        "### Key Takeaways\n1. **Peak**: March 24."
+        "Based on the analysis, **Horror** has the strongest return at **5.31x** "
+        "($148.7M revenue vs a $28.0M budget).\n\n"
+        "### Genre Revenue vs. Budget Breakdown\n\n"
+        "| Genre | Ratio |\n| --- | --- |\n| Horror | 5.31x |\n"
     )
     text = ensure_natural_language_answer(
         gemini,
-        question="Show the weekly social mentions trend",
+        question="Which genre has the strongest revenue versus budget?",
         analytics=_mentions_analytics(),
     )
-    assert "Volume stayed steady." in text
+    assert "Horror" in text
+    assert "5.31x" in text
+    assert "### Breakdown" in text
+    assert "### Key Takeaways" in text
     assert "```json" in text
-    assert "### Trend Data" in text
+    assert text.index("### Breakdown") < text.index("### Trend Data")
+    assert "| Genre | Ratio |" not in text
+
+
+def test_money_and_ratio_use_compact_cells():
+    analytics = AnalyticsResult(
+        chart_type="bar",
+        title="Result for run_query",
+        series=[],
+        raw_rows=[
+            {
+                "genre": "Horror",
+                "title_count": 1,
+                "total_budget": 28_000_000.0,
+                "total_revenue": 148_658_766.26,
+                "revenue_to_budget_ratio": 5.309,
+            },
+            {
+                "genre": "Superhero",
+                "title_count": 1,
+                "total_budget": 220_000_000.0,
+                "total_revenue": 136_034_457.25,
+                "revenue_to_budget_ratio": 0.618,
+            },
+        ],
+    )
+    text = format_briefing(
+        "Which genre has the strongest revenue versus budget?",
+        analytics,
+    )
+    assert "$148.7M" in text
+    assert "$28.0M" in text
+    assert "5.31x" in text
+    assert "**Horror**" in text
+    assert "$148,658,766.26" not in text
 
 
 def test_tool_error_is_not_rewritten_as_a_table():
