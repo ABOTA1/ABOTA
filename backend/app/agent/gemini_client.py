@@ -32,16 +32,15 @@ from mcp.client.stdio import stdio_client
 from app.config import get_settings
 from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.mcp_bridge import get_gemini_tools_from_mcp
+from app.db.clickhouse_host import sanitize_clickhouse_host
 from app.models.schemas import AnalyticsResult, ChartSeries, SeriesPoint
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ── SQL safety guard ──────────────────────────────────────────────────────
-# Argument keys we scan for SQL text. Different MCP ClickHouse servers use
-# different conventions ("query" is what mcp-clickhouse's `query_clickhouse`
-# tool expects today; "sql" is kept for compatibility with alternative
-# server implementations / future tool names).
+# Argument keys we scan for SQL text. mcp-clickhouse 0.1.x `run_select_query`
+# uses `sql`; newer servers use `query`. Keep both so the guard never misses.
 _SQL_ARG_KEYS = ("query", "sql")
 
 # Keywords that indicate a DDL/DML statement (or an attempt to smuggle one
@@ -137,16 +136,19 @@ def _build_mcp_env() -> Dict[str, str]:
 
     Starts from the current process environment (so the `mcp-clickhouse`
     binary can be found on PATH and any ambient config is preserved), then
-    overlays ClickHouse connection settings. All values are coerced to
-    strings and None values are dropped, since subprocess env dicts must be
-    str -> str and a stray None will raise a TypeError from the OS layer.
+    overlays ClickHouse Cloud connection settings. Hostnames are sanitized so
+    a pasted Connect URL (`https://….clickhouse.cloud`) still works over TLS.
     """
+    host = sanitize_clickhouse_host(settings.clickhouse_host)
+    secure = bool(settings.clickhouse_secure)
+    verify = bool(settings.clickhouse_verify) if secure else False
     overrides = {
-        "CLICKHOUSE_HOST": settings.clickhouse_host,
+        "CLICKHOUSE_HOST": host,
         "CLICKHOUSE_PORT": settings.clickhouse_port,
         "CLICKHOUSE_USER": settings.clickhouse_user,
         "CLICKHOUSE_PASSWORD": settings.clickhouse_password,
-        "CLICKHOUSE_SECURE": "true" if settings.clickhouse_secure else "false",
+        "CLICKHOUSE_SECURE": "true" if secure else "false",
+        "CLICKHOUSE_VERIFY": "true" if verify else "false",
         "CLICKHOUSE_DATABASE": settings.clickhouse_database,
         "CLICKHOUSE_CONNECT_TIMEOUT": "30",
         "CLICKHOUSE_SEND_RECEIVE_TIMEOUT": "60",
@@ -279,7 +281,7 @@ async def run_agent(question: str) -> Dict[str, Any]:
     answer: str = ""
 
     server_params = StdioServerParameters(
-        command="mcp-clickhouse",  # Requires mcp-clickhouse installed in the env
+        command="mcp-clickhouse",  # installed from backend/requirements.txt (Python 3.13 image)
         args=[],
         env=_build_mcp_env(),
     )

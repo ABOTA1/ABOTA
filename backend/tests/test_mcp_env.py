@@ -13,11 +13,27 @@ def test_mcp_env_sends_true_false_for_secure_flag():
         gemini_client.settings.clickhouse_secure = True
         env = gemini_client._build_mcp_env()
         assert env["CLICKHOUSE_SECURE"] == "true"
+        assert env["CLICKHOUSE_VERIFY"] == "true"
 
         gemini_client.settings.clickhouse_secure = False
         env = gemini_client._build_mcp_env()
         assert env["CLICKHOUSE_SECURE"] == "false"
+        assert env["CLICKHOUSE_VERIFY"] == "false"
         assert env["SSL_CERT_FILE"]
         assert env["REQUESTS_CA_BUNDLE"]
     finally:
         gemini_client.settings.clickhouse_secure = original
+
+
+def test_mcp_env_sanitizes_pasted_cloud_connect_url():
+    original_host = gemini_client.settings.clickhouse_host
+    try:
+        gemini_client.settings.clickhouse_host = (
+            "https://abc.us-east-1.aws.clickhouse.cloud:8443"
+        )
+        env = gemini_client._build_mcp_env()
+        assert env["CLICKHOUSE_HOST"] == "abc.us-east-1.aws.clickhouse.cloud"
+        assert env["CLICKHOUSE_PORT"] == str(gemini_client.settings.clickhouse_port)
+        assert env["CLICKHOUSE_DATABASE"]
+    finally:
+        gemini_client.settings.clickhouse_host = original_host

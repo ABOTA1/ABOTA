@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     clickhouse_user: str = Field("default", alias="CLICKHOUSE_USER")
     clickhouse_password: str = Field("", alias="CLICKHOUSE_PASSWORD")
     clickhouse_secure: bool = Field(True, alias="CLICKHOUSE_SECURE")
+    clickhouse_verify: bool = Field(True, alias="CLICKHOUSE_VERIFY")
     clickhouse_database: str = Field("abota", alias="CLICKHOUSE_DATABASE")
     clickhouse_query_timeout: int = Field(15, alias="CLICKHOUSE_QUERY_TIMEOUT")
 
