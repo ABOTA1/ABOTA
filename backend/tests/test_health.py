@@ -16,3 +16,4 @@ def test_health_returns_ok():
     data = response.json()
     assert data["status"] == "ok"
     assert "version" in data
+    assert data["mcp_clickhouse"] in {"installed", "missing"}

@@ -36,21 +36,16 @@ def get_kpi_snapshot() -> Dict[str, Any]:
     """
     Return a pre-computed KPI snapshot for the dashboard without going through
     the agent. Useful for initial page load performance.
+
+    Empty ClickHouse results become empty lists. Timeouts and query failures
+    propagate so the route can return HTTP 503.
     """
-    try:
-        top_movies = get_top_movies_by_revenue(limit=5)
-        platforms = get_platform_breakdown()
-        mentions_trend = get_mentions_trend()
-        genre_breakdown = get_genre_breakdown()
-        return {
-            "top_movies": top_movies,
-            "platform_breakdown": platforms,
-            "mentions_trend": mentions_trend,
-            "genre_breakdown": genre_breakdown,
-        }
-    except Exception as exc:
-        logger.error("KPI snapshot error: %s", exc)
-        return {"error": str(exc)}
+    return {
+        "top_movies": get_top_movies_by_revenue(limit=5),
+        "platform_breakdown": get_platform_breakdown(),
+        "mentions_trend": get_mentions_trend(),
+        "genre_breakdown": get_genre_breakdown(),
+    }
 
 
 def get_metrics_summary() -> Dict[str, Any]:

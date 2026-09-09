@@ -77,7 +77,7 @@ export function AgentChatPanel({ onAnalytics, className }: AgentChatPanelProps) 
         </span>
         <div>
           <p className="font-display text-sm font-semibold leading-none">ABOTA Agent</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">Gemini · ClickHouse Cloud</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Gemini (quota fallback) · ClickHouse Cloud</p>
         </div>
         <Sparkles className="ml-auto h-4 w-4 text-chart-3" />
       </div>

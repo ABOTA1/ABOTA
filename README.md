@@ -89,7 +89,7 @@ docker compose up
 
 Stop with `Ctrl+C`, or `docker compose down`.
 
-`mcp-clickhouse` runs inside the backend container as an MCP stdio subprocess. It does not need its own service.
+`mcp-clickhouse` is installed in the **backend image** and spawned per chat request as an MCP stdio subprocess against ClickHouse Cloud (HTTPS 8443, `CLICKHOUSE_VERIFY=true`). It is not a separate Compose service. The `seed` service uses `clickhouse-connect` only for DDL/INSERT; the agent never queries Cloud except through MCP.
 
 ---
 

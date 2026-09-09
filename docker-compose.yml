@@ -3,6 +3,16 @@ name: abota
 # ClickHouse lives in ClickHouse Cloud — this compose file does not start a
 # local clickhouse-server. backend/.env must contain CLICKHOUSE_HOST and
 # CLICKHOUSE_PASSWORD from the Cloud console (see backend/.env.example).
+#
+# mcp-clickhouse is NOT a Compose service. It is installed in the backend
+# image (requirements.txt) and spawned per /api/chat request as an MCP
+# stdio subprocess against the same Cloud credentials.
+
+x-clickhouse-cloud: &clickhouse_cloud
+  # Force Cloud HTTPS for mcp-clickhouse + seed even if .env omits flags.
+  CLICKHOUSE_SECURE: "true"
+  CLICKHOUSE_VERIFY: "true"
+  CLICKHOUSE_PORT: "8443"
 
 services:
   backend:
@@ -16,6 +26,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      <<: *clickhouse_cloud
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
     volumes:
@@ -55,6 +66,7 @@ services:
         condition: service_healthy
 
   # One-shot schema + catalog + fact seed against ClickHouse Cloud.
+  # Uses clickhouse-connect (DDL/INSERT). The agent still queries via MCP.
   # Exits 0 when data already exists (safe on every `docker compose up`).
   seed:
     build:
@@ -65,6 +77,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      <<: *clickhouse_cloud
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
     volumes:
