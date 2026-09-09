@@ -43,4 +43,7 @@ def test_frontend_railway_uses_prod_dockerfile():
 def test_readme_points_at_railway_runbook():
     readme = (ROOT / "README.md").read_text()
     assert "RAILWAY.md" in readme
+    assert "VERCEL.md" in readme
     assert (ROOT / "RAILWAY.md").is_file()
+    assert (ROOT / "VERCEL.md").is_file()
+    assert r"vercel\.app" in (ROOT / "backend" / "app" / "main.py").read_text()
