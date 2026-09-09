@@ -16,9 +16,19 @@ On the service that already failed:
 
 Then **+ New → GitHub Repo** (same repo) for **`frontend`**:
 
-1. **Settings → Root Directory** = `frontend`
-2. **Settings → Config File** = `/frontend/railway.toml` (required so it does not inherit the root `railway.toml`, which builds the API)
-3. Builder = Dockerfile, Dockerfile path = `Dockerfile`
+1. **Settings → Config File** = `/frontend/railway.toml`
+2. Leave **Root Directory** empty (`/`). The toml points at `frontend/Dockerfile`.
+3. In the service **Configuration** JSON, builder must be **DOCKERFILE**, not RAILPACK:
+
+```json
+{
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "frontend/Dockerfile"
+  }
+}
+```
+
 4. **Generate domain** on **frontend** only
 5. Variables in section 3
 
@@ -27,7 +37,7 @@ Then **+ New → GitHub Repo** (same repo) for **`frontend`**:
 | Service | Root Directory | Config file | What it runs |
 |---|---|---|---|
 | `backend` | `/` (default) | `/railway.toml` | FastAPI + `mcp-clickhouse` |
-| `frontend` | `frontend` | `/frontend/railway.toml` | Next.js standalone |
+| `frontend` | `/` | `/frontend/railway.toml` | Next.js standalone (`frontend/Dockerfile`) |
 
 ClickHouse Cloud and Gemini stay external. Do not add a Railway database.
 

@@ -26,7 +26,8 @@ def test_backend_railway_uses_production_dockerfile():
 
 def test_frontend_railway_uses_prod_dockerfile():
     text = (ROOT / "frontend" / "railway.toml").read_text()
-    assert 'dockerfilePath = "Dockerfile"' in text
+    assert 'builder = "DOCKERFILE"' in text
+    assert 'dockerfilePath = "frontend/Dockerfile"' in text
     assert 'healthcheckPath = "/"' in text
     prod = (ROOT / "frontend" / "Dockerfile").read_text()
     next_config = (ROOT / "frontend" / "next.config.mjs").read_text()

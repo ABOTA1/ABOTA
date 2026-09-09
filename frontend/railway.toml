@@ -1,13 +1,13 @@
-# Railway service: set Root Directory to `frontend`.
-# Name this service `frontend`. Generate a public domain on this service only
-# (the browser should not call FastAPI directly).
+# Railway service: Config File = /frontend/railway.toml
+# dockerfilePath is from the repo root (do not also set Root Directory to frontend
+# or Docker will look for frontend/frontend/Dockerfile).
 
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "frontend/Dockerfile"
 
 [deploy]
 healthcheckPath = "/"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 5
+restartPolicyMaxRetries = 10
