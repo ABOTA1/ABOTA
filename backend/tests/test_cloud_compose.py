@@ -9,6 +9,8 @@ PROMPT = (ROOT / "backend" / "app" / "agent" / "prompts.py").read_text()
 def test_compose_has_no_local_clickhouse_image():
     assert "clickhouse/clickhouse-server" not in COMPOSE
     assert "CLICKHOUSE_HOST" in COMPOSE or "backend/.env" in COMPOSE
+    assert "CLICKHOUSE_VERIFY" in COMPOSE
+    assert "mcp-clickhouse" in COMPOSE
 
 
 def test_compose_runs_one_shot_seed_on_up():
@@ -24,3 +26,5 @@ def test_system_prompt_documents_catalog_join():
     assert "budget_usd" in PROMPT
     assert "genre" in PROMPT
     assert "country" in PROMPT
+    assert "run_select_query" in PROMPT
+    assert "query_clickhouse" not in PROMPT

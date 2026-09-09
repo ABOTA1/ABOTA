@@ -7,6 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Pin every teammate (and the image) to the same packages.
+# mcp-clickhouse is installed here so the Gemini agent can spawn it over stdio.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
