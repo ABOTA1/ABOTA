@@ -252,11 +252,18 @@ def _human_col(name: str) -> str:
 def _primary_metric(metric_cols: Sequence[str]) -> Optional[str]:
     for col in metric_cols:
         lowered = col.lower()
-        if any(token in lowered for token in ("ratio", "roi", "sentiment")):
+        if any(token in lowered for token in ("ratio", "roi")):
             return col
     for col in metric_cols:
         lowered = col.lower()
         if any(token in lowered for token in _MONEY_KEYS) and "budget" not in lowered:
+            return col
+    for col in metric_cols:
+        lowered = col.lower()
+        if any(token in lowered for token in ("mention", "count", "volume")):
+            return col
+    for col in metric_cols:
+        if any(token in col.lower() for token in _SENTIMENT_KEYS):
             return col
     return metric_cols[0] if metric_cols else None
 
