@@ -1,0 +1,13 @@
+# Railway service: Config File = /frontend/railway.toml
+# dockerfilePath is from the repo root (do not also set Root Directory to frontend
+# or Docker will look for frontend/frontend/Dockerfile).
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "frontend/Dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

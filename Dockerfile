@@ -1,3 +1,5 @@
+# Default Railway service (repo root, no Root Directory) = FastAPI + mcp-clickhouse.
+# The dashboard is a second service with Root Directory = frontend.
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -6,14 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Pin every teammate (and the image) to the same packages.
-# mcp-clickhouse is installed here so the Gemini agent can spawn it over stdio.
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY backend/ .
 
 EXPOSE 8000
 
-# Railway injects PORT. Local compose overrides this command with --reload.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -1,20 +1,33 @@
-FROM node:20-alpine
-
+# Production Next.js image for Railway (standalone Node server).
+FROM node:20-alpine AS deps
 WORKDIR /app
-
+RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-# Git on Windows often checks this script out with CRLF. Alpine then fails with
-# "exec docker-entrypoint.sh: no such file or directory" because the shebang
-# becomes /bin/sh\r. Strip CRs and invoke via /bin/sh so the image always boots.
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
-  && chmod +x /usr/local/bin/docker-entrypoint.sh
-
+FROM node:20-alpine AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN mkdir -p public
+RUN npm run build
 
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+
+RUN apk add --no-cache libc6-compat \
+  && addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
 EXPOSE 3000
-
-ENTRYPOINT ["/bin/sh", "/usr/local/bin/docker-entrypoint.sh"]
-CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+CMD ["sh", "-c", "node server.js"]

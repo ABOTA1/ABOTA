@@ -93,6 +93,18 @@ Stop with `Ctrl+C`, or `docker compose down`.
 
 ---
 
+## Deploy on Railway
+
+If Railway shows **Railpack could not determine how to build the app**, the service is scanning the repo root. Follow **[RAILWAY.md](./RAILWAY.md)** section 0 (two services, Docker, no `start.sh`).
+
+Step-by-step (service names, env vars, private networking): **[RAILWAY.md](./RAILWAY.md)**.
+
+## Deploy the dashboard on Vercel
+
+The API can stay on Railway. Put only Next.js on Vercel (Root Directory `frontend`, `NEXT_PUBLIC_API_URL` = public Railway API). Steps: **[VERCEL.md](./VERCEL.md)**.
+
+---
+
 ## Optional: local venv (only if you cannot use Docker)
 
 Same packages as Docker, pinned in `backend/requirements.txt`:

@@ -1,11 +1,31 @@
 """
 app/config.py – Centralised settings via Pydantic-Settings.
 """
+import json
 from functools import lru_cache
-from typing import List
+from typing import Any, List
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def parse_cors_origins(value: Any) -> List[str]:
+    """Accept JSON lists or comma-separated hosts (Railway dashboard friendly)."""
+    if value is None:
+        return ["http://localhost:3000", "http://127.0.0.1:3000"]
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return ["http://localhost:3000", "http://127.0.0.1:3000"]
+        if stripped.startswith("["):
+            parsed = json.loads(stripped)
+            if not isinstance(parsed, list):
+                raise ValueError("CORS_ORIGINS JSON must be a list of origins.")
+            return [str(item).strip() for item in parsed if str(item).strip()]
+        return [part.strip() for part in stripped.split(",") if part.strip()]
+    raise ValueError("CORS_ORIGINS must be a list or comma-separated string.")
 
 
 class Settings(BaseSettings):
@@ -59,10 +79,15 @@ class Settings(BaseSettings):
     # ── App ────────────────────────────────────────────────────────────────────
     app_env: str = Field("development", alias="APP_ENV")
     log_level: str = Field("INFO", alias="LOG_LEVEL")
-    cors_origins: List[str] = Field(
-        default=["http://localhost:3000", "http://127.0.0.1:3000"],
+    # Stored as a string so Railway can set a comma-separated URL without JSON.
+    # JSON lists from .env.example still parse via cors_origin_list().
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
         alias="CORS_ORIGINS",
     )
+
+    def cors_origin_list(self) -> List[str]:
+        return parse_cors_origins(self.cors_origins)
 
 
 @lru_cache
